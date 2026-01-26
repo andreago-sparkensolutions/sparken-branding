@@ -77,20 +77,30 @@ export async function POST(request: NextRequest) {
       const pdfBytes = new Uint8Array(arrayBuffer);
       console.log('PDF loaded, size:', pdfBytes.length);
       
-      // Extract title from filename (remove extension and clean up)
-      const titleFromFilename = file.name
-        .replace(/\.pdf$/i, '')
-        .replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+      // Check if this is already a Sparken-branded PDF
+      const isAlreadyBranded = file.name.toLowerCase().includes('sparken-branded');
       
-      // Apply Sparken branding overlay with cover page
-      console.log('Applying Sparken branding overlay with cover page...');
-      brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
-        addCoverPage: true,
-        title: titleFromFilename,
-        subtitle: 'Prepared by Sparken Solutions'
-      });
-      console.log('Branding complete, final size:', brandedPdfBytes.length);
+      if (isAlreadyBranded) {
+        // Don't re-brand, just return the PDF as-is
+        console.log('PDF is already branded, returning as-is');
+        brandedPdfBytes = pdfBytes;
+      } else {
+        // Extract title from filename (remove extension, download numbers, and clean up)
+        const titleFromFilename = file.name
+          .replace(/\.pdf$/i, '')
+          .replace(/\s*\(\d+\)$/, '') // Remove " (3)", " (2)", etc. from duplicate downloads
+          .replace(/[-_]/g, ' ')
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+        
+        // Apply Sparken branding overlay with cover page
+        console.log('Applying Sparken branding overlay with cover page...');
+        brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
+          addCoverPage: true,
+          title: titleFromFilename,
+          subtitle: 'Prepared by Sparken Solutions'
+        });
+        console.log('Branding complete, final size:', brandedPdfBytes.length);
+      }
     } else {
       console.error('Unsupported file type:', file.name);
       return NextResponse.json(
