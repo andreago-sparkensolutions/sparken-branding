@@ -80,6 +80,11 @@ export async function generatePythonPDF(
  * @returns Promise<boolean>
  */
 export async function checkPythonAvailability(): Promise<boolean> {
+  // Python dependencies not available on Vercel serverless
+  if (process.env.VERCEL) {
+    return Promise.resolve(false);
+  }
+  
   return new Promise((resolve) => {
     const pythonProcess = spawn('python3', ['-c', 'import reportlab; import markdown; print("OK")']);
     
