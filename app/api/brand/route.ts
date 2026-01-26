@@ -60,15 +60,37 @@ export async function POST(request: NextRequest) {
           console.error('Python PDF generation failed, falling back to TypeScript:', error);
           // Fallback to TypeScript converter
           const markdownText = await file.text();
+          
+          // Extract title from markdown
+          const titleMatch = markdownText.match(/^#\s+(.+)$/m);
+          const subtitleMatch = markdownText.match(/^##\s+(.+)$/m);
+          const title = titleMatch ? titleMatch[1].trim() : 'Document';
+          const subtitle = subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions';
+          
           const pdfBytes = await convertMarkdownToPdf(markdownText);
-          brandedPdfBytes = await applySparkEnBranding(pdfBytes);
+          brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
+            addCoverPage: true,
+            title: title,
+            subtitle: subtitle
+          });
         }
       } else {
         console.log('Python not available, using TypeScript converter');
         // Fallback to TypeScript converter
         const markdownText = await file.text();
+        
+        // Extract title from markdown
+        const titleMatch = markdownText.match(/^#\s+(.+)$/m);
+        const subtitleMatch = markdownText.match(/^##\s+(.+)$/m);
+        const title = titleMatch ? titleMatch[1].trim() : 'Document';
+        const subtitle = subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions';
+        
         const pdfBytes = await convertMarkdownToPdf(markdownText);
-        brandedPdfBytes = await applySparkEnBranding(pdfBytes);
+        brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
+          addCoverPage: true,
+          title: title,
+          subtitle: subtitle
+        });
       }
     } else if (file.name.toLowerCase().endsWith('.pdf')) {
       console.log('Processing as existing PDF file - using TypeScript overlay');

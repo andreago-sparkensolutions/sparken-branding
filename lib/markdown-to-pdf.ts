@@ -69,11 +69,18 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
           continue;
         }
         
-        // Parse row
+        // Parse row and clean markdown from cells
         const cells = currentLine
           .split('|')
           .slice(1, -1) // Remove empty first/last elements
-          .map(cell => cell.trim());
+          .map(cell => {
+            let cleanCell = cell.trim();
+            // Remove markdown formatting
+            cleanCell = cleanCell.replace(/\*\*(.+?)\*\*/g, '$1'); // Remove bold
+            cleanCell = cleanCell.replace(/\*(.+?)\*/g, '$1');     // Remove italic
+            cleanCell = cleanCell.replace(/`(.+?)`/g, '$1');       // Remove code
+            return cleanCell;
+          });
         
         if (cells.length > 0 && cells.some(cell => cell.length > 0)) {
           tableRows.push(cells);
@@ -220,12 +227,9 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
       }
     }
     
-    // Check for bold text - only use bold for headers and explicitly bolded text
-    const isBold = line.includes('**') && !headerMatch;
+    // Remove bold markers but DON'T make the whole line bold
+    // Only specific words marked with ** should be bold (handled separately)
     cleanLine = cleanLine.replace(/\*\*(.+?)\*\*/g, '$1');
-    if (isBold) {
-      currentFont = boldFont;
-    }
     
     // Check for italic (just remove markers, we don't have italic font)
     cleanLine = cleanLine.replace(/\*(.+?)\*/g, '$1');
@@ -236,9 +240,13 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
     // Check for links [text](url) - just show text
     cleanLine = cleanLine.replace(/\[(.+?)\]\(.+?\)/g, '$1');
     
-    // Check for list items
+    // Check for list items - clean markdown from them
     if (cleanLine.match(/^[-*+]\s+/)) {
       cleanLine = cleanLine.replace(/^[-*+]\s+/, '  • ');
+      // Remove any remaining markdown formatting from list items
+      cleanLine = cleanLine.replace(/\*\*(.+?)\*\*/g, '$1');
+      cleanLine = cleanLine.replace(/\*(.+?)\*/g, '$1');
+      cleanLine = cleanLine.replace(/`(.+?)`/g, '$1');
     }
     
     // Word wrap
