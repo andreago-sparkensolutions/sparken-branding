@@ -84,7 +84,17 @@ class SparkEnPDFGenerator:
                     row = [cell.strip() for cell in lines[i].strip().split('|')[1:-1]]
                     # Skip separator rows
                     if not all(re.match(r'^[-:]+$', cell.strip()) for cell in row):
-                        table_rows.append(row)
+                        # Clean markdown formatting from cells
+                        cleaned_row = []
+                        for cell in row:
+                            # Remove bold markers
+                            cell = re.sub(r'\*\*(.+?)\*\*', r'\1', cell)
+                            # Remove italic markers
+                            cell = re.sub(r'\*(.+?)\*', r'\1', cell)
+                            # Remove inline code markers
+                            cell = re.sub(r'`(.+?)`', r'\1', cell)
+                            cleaned_row.append(cell)
+                        table_rows.append(cleaned_row)
                     i += 1
                 if table_rows:
                     content.append(('table', table_rows))
@@ -101,12 +111,19 @@ class SparkEnPDFGenerator:
             
             # Lists
             elif line.startswith('- ') or line.startswith('* ') or line.startswith('+ '):
-                content.append(('body', line))
+                # Clean markdown formatting from list items
+                cleaned_line = re.sub(r'\*\*(.+?)\*\*', r'\1', line)  # Remove bold
+                cleaned_line = re.sub(r'\*(.+?)\*', r'\1', cleaned_line)  # Remove italic
+                cleaned_line = re.sub(r'`(.+?)`', r'\1', cleaned_line)  # Remove code
+                content.append(('body', cleaned_line))
             
             # Regular paragraphs
             else:
-                # Handle bold and italic
-                content.append(('body', line))
+                # Clean markdown formatting from paragraphs
+                cleaned_line = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', line)  # Convert bold to HTML
+                cleaned_line = re.sub(r'\*(.+?)\*', r'<i>\1</i>', cleaned_line)  # Convert italic to HTML
+                cleaned_line = re.sub(r'`(.+?)`', r'\1', cleaned_line)  # Remove code markers
+                content.append(('body', cleaned_line))
             
             i += 1
         
@@ -140,9 +157,16 @@ class SparkEnPDFGenerator:
         """
         parsed = self.parse_markdown(markdown_text)
         
-        # Add cover page if we found title metadata
-        if self.metadata.get('title') and not self.has_cover:
-            self.add_cover_page()
+        # Add cover page if we found title metadata and no cover exists yet
+        # OR update existing cover with parsed title if it's better
+        if self.metadata.get('title'):
+            if not self.has_cover:
+                self.add_cover_page()
+            else:
+                # Update existing cover data with parsed title (parsed title takes precedence)
+                self.cover_data['title'] = self.metadata['title']
+                if self.metadata.get('subtitle'):
+                    self.cover_data['subtitle'] = self.metadata['subtitle']
         
         # Convert parsed content to PDF components
         for content_type, content_data in parsed:
