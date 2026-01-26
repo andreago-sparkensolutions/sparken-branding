@@ -174,22 +174,6 @@ export async function applySparkEnBranding(
 
       console.log(`Branding page ${pageNumber}: ${width}x${height}`);
 
-      // Check for text in the top area to avoid covering content
-      const textContent = page.getTextContent?.() || [];
-      let hasTopText = false;
-      
-      // Simple heuristic: check if there's likely text in the top 100 points
-      // In most PDFs, if the page has content starting very high, we should use a smaller header
-      try {
-        const content = page.node.Contents?.();
-        if (content) {
-          hasTopText = true; // Conservative: assume there might be top content
-        }
-      } catch (e) {
-        // If we can't check, be conservative
-        hasTopText = true;
-      }
-
       // 1. Add small purple header block - much smaller to avoid covering text
       // Reduced from 80 to 35 points to minimize content coverage
       const headerHeight = 35;
