@@ -1,36 +1,118 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sparken Document Branding
+
+**Built for the Brain**
+
+A behavioral-science driven document branding tool that applies Sparken's professional identity to PDF, Word, and Markdown documents.
+
+## Brand Philosophy
+
+This tool reflects Sparken's core principles:
+- **Clarity over hype** - Clean, structured layouts
+- **Depth over decoration** - Intentional design choices
+- **Trust over persuasion** - Subtle, professional branding
+
+All brand assets verified against official Sparken brandbook.
+
+## Features
+
+- 🎨 **Official Brand Colors**: Deep Cognitive Purple (#5E5592), Behavioral Yellow (#F8D830), Research Lime (#D7DF5E), Soft Purple (#D0C6E1)
+- ⚡ **Instant Processing**: Fast client-side PDF processing
+- 📄 **Multiple Formats**: Supports PDF, Word, and Markdown documents (.pdf, .doc, .docx, .md)
+- 🎯 **Effortless Upload**: Clean drag-and-drop interface
+- 📱 **Responsive Design**: Works on desktop and mobile devices
+- 🧠 **Cognitive Flow**: Reduces friction at every step
+- 🏢 **Official Logo**: Uses authentic Sparken four-pointed star logo
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Installation
 
 ```bash
+# Install dependencies
+npm install
+
+# Run the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How to Use
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Upload**: Drag and drop your PDF, Word, or Markdown document, or click to browse
+2. **Process**: The app automatically applies Sparken branding
+3. **Download**: Download your branded document instantly
 
-## Learn More
+## Branding Elements
 
-To learn more about Next.js, take a look at the following resources:
+The tool applies the following elements designed for clarity and trust:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Official Sparken Logo**: Four-pointed star with "S" mark + horizontal wordmark
+- **Watermark**: Very subtle diagonal "SPARKEN" watermark (4% opacity - calm, not aggressive)
+- **Header Area**: Logo placement with decorative line in Deep Cognitive Purple
+- **Footer**: "Built for the Brain" tagline with page numbers in official black (#030403)
+- **Structure**: Thin decorative lines for visual hierarchy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+All colors verified from official Sparken brandbook.
 
-## Deploy on Vercel
+## Technology Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **PDF Processing**: pdf-lib
+- **File Upload**: react-dropzone
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+sparken-branding/
+├── app/
+│   ├── api/
+│   │   └── brand/          # PDF branding API endpoint
+│   ├── components/
+│   │   ├── FileUpload.tsx  # Drag-and-drop upload
+│   │   └── ProcessingStatus.tsx  # Status indicator
+│   ├── layout.tsx          # Root layout
+│   ├── page.tsx            # Main page
+│   └── globals.css         # Global styles
+├── lib/
+│   ├── constants.ts        # Sparken brand constants
+│   ├── markdown-to-pdf.ts  # Markdown to PDF converter
+│   └── pdf-branding.ts     # PDF branding engine
+└── public/
+    └── sparken-logo.svg    # Sparken logo
+```
+
+## Customization
+
+To customize the branding, edit the constants in `lib/constants.ts`:
+
+- **Brand colors** - Official palette from brandbook
+  - Deep Cognitive Purple (#5E5592)
+  - Behavioral Yellow (#F8D830)
+  - Research Lime (#D7DF5E)
+  - Soft Purple (#D0C6E1)
+  - Near-black (#030403)
+- **Logo** - Official PNG logo files in `/public`
+- **Watermark opacity** - Control subtlety (default: 4%)
+- **Header and footer text** - Update messaging
+- **Upload file size limits** - Adjust as needed
+
+Design philosophy: If a change increases cognitive load or feels aggressive, reconsider it.
+
+## Official Brand Assets
+
+Logo files used:
+- `public/sparken-logo-horizontal.png` - Horizontal logo with tagline
+- `public/sparken-logo-vertical.png` - Vertical logo variation
+
+Colors verified from Sparken brandbook 1.pdf
+
+## License
+
+© 2026 Sparken. All rights reserved.

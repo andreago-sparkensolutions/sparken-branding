@@ -1,0 +1,309 @@
+#!/usr/bin/env python3
+"""
+Sparken PDF Generator
+Main script to generate fully branded PDFs from markdown/text content
+"""
+
+import sys
+import os
+import re
+import json
+from io import BytesIO
+
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, KeepTogether
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas as pdf_canvas
+
+from brand_constants import BrandColors, Typography, Layout
+from components import (
+    CoverPageComponent, HeaderComponent, FooterComponent, WatermarkComponent,
+    TableComponent, CalloutComponent, HeadingComponent, BodyTextComponent
+)
+
+
+class SparkEnPDFGenerator:
+    """Main PDF generator class"""
+    
+    def __init__(self, output_path=None):
+        """
+        Initialize PDF generator
+        
+        Args:
+            output_path: Path to save PDF (or None for BytesIO)
+        """
+        self.output_path = output_path or BytesIO()
+        self.story = []
+        self.metadata = {}
+        self.has_cover = False
+        
+    def parse_markdown(self, markdown_text):
+        """
+        Parse markdown text and extract components
+        
+        Args:
+            markdown_text: Raw markdown text
+        
+        Returns:
+            Parsed content structure
+        """
+        lines = markdown_text.split('\n')
+        content = []
+        
+        # Extract metadata from first few lines
+        if lines and lines[0].startswith('# '):
+            self.metadata['title'] = lines[0][2:].strip()
+            lines = lines[1:]
+        
+        # Look for subtitle or "Prepared For" in next lines
+        if lines and (lines[0].startswith('## ') or 'Prepared For' in lines[0] or 'Subtitle' in lines[0]):
+            self.metadata['subtitle'] = lines[0].replace('## ', '').strip()
+            lines = lines[1:]
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            if not line:
+                i += 1
+                continue
+            
+            # Headers
+            if line.startswith('# '):
+                content.append(('h1', line[2:]))
+            elif line.startswith('## '):
+                content.append(('h2', line[3:]))
+            elif line.startswith('### '):
+                content.append(('h3', line[4:]))
+            
+            # Tables (simple markdown table detection)
+            elif line.startswith('|'):
+                table_rows = []
+                while i < len(lines) and lines[i].strip().startswith('|'):
+                    row = [cell.strip() for cell in lines[i].strip().split('|')[1:-1]]
+                    # Skip separator rows
+                    if not all(re.match(r'^[-:]+$', cell.strip()) for cell in row):
+                        table_rows.append(row)
+                    i += 1
+                if table_rows:
+                    content.append(('table', table_rows))
+                i -= 1
+            
+            # Callouts (lines starting with > )
+            elif line.startswith('> '):
+                callout_text = line[2:]
+                # Collect multi-line callouts
+                while i + 1 < len(lines) and lines[i + 1].strip().startswith('> '):
+                    i += 1
+                    callout_text += ' ' + lines[i].strip()[2:]
+                content.append(('callout', callout_text))
+            
+            # Lists
+            elif line.startswith('- ') or line.startswith('* ') or line.startswith('+ '):
+                content.append(('body', line))
+            
+            # Regular paragraphs
+            else:
+                # Handle bold and italic
+                content.append(('body', line))
+            
+            i += 1
+        
+        return content
+    
+    def add_cover_page(self, title=None, subtitle=None, theme='formal'):
+        """
+        Add a cover page to the PDF
+        
+        Args:
+            title: Cover page title (uses metadata if not provided)
+            subtitle: Cover page subtitle
+            theme: 'formal' (purple) or 'creative' (yellow)
+        """
+        title = title or self.metadata.get('title', 'Untitled Document')
+        subtitle = subtitle or self.metadata.get('subtitle', '')
+        
+        self.has_cover = True
+        self.cover_data = {
+            'title': title,
+            'subtitle': subtitle,
+            'theme': theme
+        }
+    
+    def add_content_from_markdown(self, markdown_text):
+        """
+        Parse markdown and add all content to story
+        
+        Args:
+            markdown_text: Raw markdown text
+        """
+        parsed = self.parse_markdown(markdown_text)
+        
+        # Add cover page if we found title metadata
+        if self.metadata.get('title') and not self.has_cover:
+            self.add_cover_page()
+        
+        # Convert parsed content to PDF components
+        for content_type, content_data in parsed:
+            if content_type == 'h1':
+                self.story.append(HeadingComponent.create_h1(content_data))
+                self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 2))
+            
+            elif content_type == 'h2':
+                self.story.append(HeadingComponent.create_h2(content_data))
+                self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 2))
+            
+            elif content_type == 'h3':
+                self.story.append(HeadingComponent.create_h3(content_data))
+                self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 4))
+            
+            elif content_type == 'body':
+                self.story.append(BodyTextComponent.create(content_data))
+            
+            elif content_type == 'table':
+                table = TableComponent.create(content_data)
+                if table:
+                    self.story.append(table)
+                    self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING))
+            
+            elif content_type == 'callout':
+                callout_elements = CalloutComponent.create(content_data)
+                for element in callout_elements:
+                    self.story.append(element)
+    
+    def _add_page_decorations(self, canvas_obj, doc):
+        """
+        Add headers, footers, and watermarks to each page
+        
+        Args:
+            canvas_obj: ReportLab canvas
+            doc: Document object
+        """
+        page_num = canvas_obj.getPageNumber()
+        
+        # Skip decorations on cover page
+        if self.has_cover and page_num == 1:
+            return
+        
+        # Determine actual page number (subtract cover page if present)
+        actual_page = page_num - 1 if self.has_cover else page_num
+        total_pages = doc.page - 1 if self.has_cover else doc.page
+        
+        # Get logo paths
+        logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public')
+        horizontal_logo = os.path.join(logo_dir, 'sparken-logo-horizontal-yellow.png')
+        vertical_logo = os.path.join(logo_dir, 'sparken logo-vertical-cropped.png')
+        
+        # Add watermark first (so it's behind content)
+        WatermarkComponent.create(canvas_obj, vertical_logo)
+        
+        # Add header
+        HeaderComponent.create(canvas_obj, horizontal_logo, actual_page)
+        
+        # Add footer
+        FooterComponent.create(canvas_obj, actual_page, total_pages)
+    
+    def _draw_cover_page(self, canvas_obj):
+        """Draw the cover page"""
+        if not self.has_cover:
+            return
+        
+        logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public')
+        theme = self.cover_data.get('theme', 'formal')
+        
+        if theme == 'formal':
+            logo_path = os.path.join(logo_dir, 'sparken-logo-horizontal-yellow.png')
+        else:
+            logo_path = os.path.join(logo_dir, 'sparken logo horizontal cropped.png')
+        
+        CoverPageComponent.create(
+            canvas_obj,
+            self.cover_data['title'],
+            self.cover_data.get('subtitle', ''),
+            theme,
+            logo_path
+        )
+    
+    def generate(self):
+        """
+        Generate the final PDF
+        
+        Returns:
+            PDF bytes (if output_path is BytesIO) or None (if writing to file)
+        """
+        # Create document
+        doc = SimpleDocTemplate(
+            self.output_path,
+            pagesize=letter,
+            leftMargin=Layout.MARGIN_LEFT,
+            rightMargin=Layout.MARGIN_RIGHT,
+            topMargin=Layout.MARGIN_TOP + Layout.HEADER_HEIGHT,
+            bottomMargin=Layout.MARGIN_BOTTOM + Layout.FOOTER_HEIGHT
+        )
+        
+        # Build PDF
+        if self.has_cover:
+            # Create a custom canvas for cover page
+            def add_decorations(canvas_obj, doc):
+                if canvas_obj.getPageNumber() == 1:
+                    self._draw_cover_page(canvas_obj)
+                else:
+                    self._add_page_decorations(canvas_obj, doc)
+            
+            # Add page break after cover
+            cover_story = [PageBreak()] + self.story
+            doc.build(cover_story, onFirstPage=add_decorations, onLaterPages=add_decorations)
+        else:
+            doc.build(self.story, onFirstPage=self._add_page_decorations, 
+                     onLaterPages=self._add_page_decorations)
+        
+        # Return bytes if using BytesIO
+        if isinstance(self.output_path, BytesIO):
+            return self.output_path.getvalue()
+        
+        return None
+
+
+def main():
+    """Main entry point for command-line usage"""
+    # Read input from stdin or file
+    if len(sys.argv) > 1:
+        input_file = sys.argv[1]
+        with open(input_file, 'r', encoding='utf-8') as f:
+            markdown_text = f.read()
+    else:
+        markdown_text = sys.stdin.read()
+    
+    # Parse metadata if JSON is provided
+    metadata = {}
+    if len(sys.argv) > 2:
+        try:
+            metadata = json.loads(sys.argv[2])
+        except:
+            pass
+    
+    # Generate PDF
+    output = BytesIO()
+    generator = SparkEnPDFGenerator(output)
+    
+    # Add cover page if metadata provided
+    if metadata.get('title'):
+        generator.add_cover_page(
+            metadata.get('title'),
+            metadata.get('subtitle', ''),
+            metadata.get('theme', 'formal')
+        )
+    
+    # Add content
+    generator.add_content_from_markdown(markdown_text)
+    
+    # Generate and output
+    pdf_bytes = generator.generate()
+    
+    # Write to stdout (binary)
+    sys.stdout.buffer.write(pdf_bytes)
+
+
+if __name__ == '__main__':
+    main()

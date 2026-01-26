@@ -1,0 +1,22 @@
+<svg width="200" height="60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Deep Cognitive Purple background -->
+  <rect width="200" height="60" fill="#FFFFFF" rx="4"/>
+  
+  <!-- Sparkle Icon - Behavioral Science Symbol -->
+  <g transform="translate(25, 30)">
+    <!-- Outer circle - Deep Cognitive Purple -->
+    <circle cx="0" cy="0" r="12" fill="#5E5592"/>
+    <!-- Inner accent - Behavioral Yellow -->
+    <circle cx="0" cy="0" r="6" fill="#F8D830"/>
+    <!-- Sparkle rays -->
+    <path d="M 0,-12 L 1,-4 L 0,0 L -1,-4 Z" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M 12,0 L 4,1 L 0,0 L 4,-1 Z" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M 0,12 L 1,4 L 0,0 L -1,4 Z" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M -12,0 L -4,1 L 0,0 L -4,-1 Z" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+  
+  <!-- SPARKEN Text - Clean, structured -->
+  <text x="55" y="40" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#5E5592" letter-spacing="1">
+    SPARKEN
+  </text>
+</svg>
