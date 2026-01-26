@@ -68,9 +68,19 @@ export async function POST(request: NextRequest) {
       const pdfBytes = new Uint8Array(arrayBuffer);
       console.log('PDF loaded, size:', pdfBytes.length);
       
-      // Apply Sparken branding overlay
-      console.log('Applying Sparken branding overlay...');
-      brandedPdfBytes = await applySparkEnBranding(pdfBytes);
+      // Extract title from filename (remove extension and clean up)
+      const titleFromFilename = file.name
+        .replace(/\.pdf$/i, '')
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+      
+      // Apply Sparken branding overlay with cover page
+      console.log('Applying Sparken branding overlay with cover page...');
+      brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
+        addCoverPage: true,
+        title: titleFromFilename,
+        subtitle: 'Prepared by Sparken'
+      });
       console.log('Branding complete, final size:', brandedPdfBytes.length);
     } else {
       console.error('Unsupported file type:', file.name);

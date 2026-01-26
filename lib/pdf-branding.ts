@@ -8,8 +8,95 @@ const DEEP_COGNITIVE_PURPLE = rgb(0.369, 0.333, 0.573);  // #5E5592
 const BEHAVIORAL_YELLOW = rgb(0.973, 0.847, 0.188);      // #F8D830
 const RESEARCH_LIME = rgb(0.843, 0.875, 0.369);          // #D7DF5E
 const SOFT_GRAY = rgb(0.957, 0.961, 0.969);              // #F4F5F7
+const WHITE = rgb(1, 1, 1);
 
-export async function applySparkEnBranding(pdfBytes: Uint8Array): Promise<Uint8Array> {
+/**
+ * Create a cover page for the PDF
+ */
+async function createCoverPage(
+  pdfDoc: PDFDocument, 
+  horizontalLogoImage: PDFImage | null,
+  title: string = 'Document',
+  subtitle: string = ''
+): Promise<PDFPage> {
+  const coverPage = pdfDoc.insertPage(0);
+  const { width, height } = coverPage.getSize();
+  
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  
+  // Full purple background
+  coverPage.drawRectangle({
+    x: 0,
+    y: 0,
+    width: width,
+    height: height,
+    color: DEEP_COGNITIVE_PURPLE,
+  });
+  
+  // Add white logo at top center
+  if (horizontalLogoImage) {
+    const logoWidth = 300;
+    const logoHeight = 100;
+    const logoX = (width - logoWidth) / 2;
+    const logoY = height - 200;
+    
+    coverPage.drawImage(horizontalLogoImage, {
+      x: logoX,
+      y: logoY,
+      width: logoWidth,
+      height: logoHeight,
+    });
+  }
+  
+  // Title (centered, upper-case, white)
+  const titleText = title.toUpperCase();
+  const titleSize = 36;
+  const titleWidth = helveticaBold.widthOfTextAtSize(titleText, titleSize);
+  coverPage.drawText(titleText, {
+    x: (width - titleWidth) / 2,
+    y: height / 2 + 50,
+    size: titleSize,
+    font: helveticaBold,
+    color: WHITE,
+  });
+  
+  // Subtitle if provided
+  if (subtitle) {
+    const subtitleSize = 18;
+    const subtitleWidth = helvetica.widthOfTextAtSize(subtitle, subtitleSize);
+    coverPage.drawText(subtitle, {
+      x: (width - subtitleWidth) / 2,
+      y: height / 2,
+      size: subtitleSize,
+      font: helvetica,
+      color: WHITE,
+    });
+  }
+  
+  // Footer tagline
+  const tagline = 'DIGITAL MARKETING AGENCY';
+  const taglineSize = 12;
+  const taglineWidth = helvetica.widthOfTextAtSize(tagline, taglineSize);
+  coverPage.drawText(tagline, {
+    x: (width - taglineWidth) / 2,
+    y: 100,
+    size: taglineSize,
+    font: helvetica,
+    color: WHITE,
+  });
+  
+  return coverPage;
+}
+
+export async function applySparkEnBranding(
+  pdfBytes: Uint8Array, 
+  options?: { 
+    addCoverPage?: boolean;
+    title?: string;
+    subtitle?: string;
+  }
+): Promise<Uint8Array> {
   try {
     console.log('Starting PDF branding process...');
     
@@ -66,11 +153,24 @@ export async function applySparkEnBranding(pdfBytes: Uint8Array): Promise<Uint8A
       console.warn('WARNING: No logos could be loaded. Proceeding without logos.');
     }
 
-    // Apply branding to each page
-    pages.forEach((page, index) => {
+    // Add cover page if requested (defaults to true)
+    if (options?.addCoverPage !== false) {
+      const title = options?.title || 'Branded Document';
+      const subtitle = options?.subtitle || '';
+      console.log('Adding cover page:', title);
+      await createCoverPage(pdfDoc, horizontalLogoImage, title, subtitle);
+    }
+
+    // Get all pages (including the new cover page if added)
+    const allPages = pdfDoc.getPages();
+    const startIndex = options?.addCoverPage !== false ? 1 : 0; // Skip cover page for branding
+
+    // Apply branding to each content page (not the cover)
+    for (let i = startIndex; i < allPages.length; i++) {
+      const page = allPages[i];
       const { width, height } = page.getSize();
-      const pageNumber = index + 1;
-      const totalPages = pages.length;
+      const pageNumber = i - startIndex + 1;
+      const totalPages = allPages.length - startIndex;
 
       console.log(`Branding page ${pageNumber}: ${width}x${height}`);
 
@@ -180,7 +280,7 @@ export async function applySparkEnBranding(pdfBytes: Uint8Array): Promise<Uint8A
         font: helveticaBold,
         color: DEEP_COGNITIVE_PURPLE,
       });
-    });
+    }
 
     // Save and return the modified PDF
     const modifiedPdfBytes = await pdfDoc.save();
