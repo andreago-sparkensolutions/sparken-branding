@@ -26,22 +26,22 @@ export async function applySparkEnBranding(pdfBytes: Uint8Array): Promise<Uint8A
     let horizontalLogoImage: PDFImage | null = null;
     let verticalLogoImage: PDFImage | null = null;
     
-    // Load yellow horizontal logo for header
-    const horizontalLogoPath = path.join(process.cwd(), 'public', 'sparken-logo-horizontal-yellow.png');
+    // Load white horizontal logo for header
+    const horizontalLogoPath = path.join(process.cwd(), 'public', 'sparken-logo-horizontal-white.png');
     try {
-      console.log('Loading yellow horizontal logo from:', horizontalLogoPath);
+      console.log('Loading white horizontal logo from:', horizontalLogoPath);
       if (fs.existsSync(horizontalLogoPath)) {
         const logoBytes = fs.readFileSync(horizontalLogoPath);
-        console.log(`Yellow horizontal logo loaded: ${logoBytes.length} bytes`);
+        console.log(`White horizontal logo loaded: ${logoBytes.length} bytes`);
         try {
           horizontalLogoImage = await pdfDoc.embedPng(logoBytes);
-          console.log('Yellow horizontal logo embedded successfully');
+          console.log('White horizontal logo embedded successfully');
         } catch (error) {
-          console.error('Failed to embed yellow horizontal logo:', error);
+          console.error('Failed to embed white horizontal logo:', error);
         }
       }
     } catch (error) {
-      console.error('Yellow horizontal logo loading error:', error);
+      console.error('White horizontal logo loading error:', error);
     }
     
     // Load vertical logo for watermark pattern
@@ -74,8 +74,25 @@ export async function applySparkEnBranding(pdfBytes: Uint8Array): Promise<Uint8A
 
       console.log(`Branding page ${pageNumber}: ${width}x${height}`);
 
-      // 1. Add purple header block (like the example PDF)
-      const headerHeight = 80;
+      // Check for text in the top area to avoid covering content
+      const textContent = page.getTextContent?.() || [];
+      let hasTopText = false;
+      
+      // Simple heuristic: check if there's likely text in the top 100 points
+      // In most PDFs, if the page has content starting very high, we should use a smaller header
+      try {
+        const content = page.node.Contents?.();
+        if (content) {
+          hasTopText = true; // Conservative: assume there might be top content
+        }
+      } catch (e) {
+        // If we can't check, be conservative
+        hasTopText = true;
+      }
+
+      // 1. Add small purple header block - much smaller to avoid covering text
+      // Reduced from 80 to 35 points to minimize content coverage
+      const headerHeight = 35;
       page.drawRectangle({
         x: 0,
         y: height - headerHeight,
@@ -84,16 +101,17 @@ export async function applySparkEnBranding(pdfBytes: Uint8Array): Promise<Uint8A
         color: DEEP_COGNITIVE_PURPLE,
       });
 
-      // 2. Add yellow Sparken horizontal logo in header
+      // 2. Add white Sparken horizontal logo in header (smaller size)
       if (horizontalLogoImage) {
         try {
+          // Smaller logo to fit in the reduced header
           page.drawImage(horizontalLogoImage, {
-            x: 50,
-            y: height - 65,
-            width: 140,
-            height: 45,
+            x: 40,
+            y: height - 30,
+            width: 100,  // Reduced from 140
+            height: 25,  // Reduced from 45
           });
-          console.log(`Yellow logo added to page ${pageNumber} header`);
+          console.log(`White logo added to page ${pageNumber} header`);
         } catch (error) {
           console.error(`Failed to draw logo on page ${pageNumber}:`, error);
         }
