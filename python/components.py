@@ -75,25 +75,25 @@ class HeaderComponent:
     @staticmethod
     def create(canvas_obj, logo_path=None, page_num=1):
         """
-        Create header with optional logo and yellow accent line
+        Create header with optional logo and purple bar
         
         Args:
             canvas_obj: ReportLab canvas object
-            logo_path: Path to logo image (horizontal yellow for purple header)
+            logo_path: Path to logo image (horizontal white logo)
             page_num: Current page number
         """
-        # Purple header bar
+        # Small purple header bar (reduced from 80 to 35 points to avoid covering text)
         canvas_obj.setFillColor(BrandColors.BRAND_PURPLE)
         canvas_obj.rect(0, Layout.PAGE_HEIGHT - Layout.HEADER_HEIGHT, 
                        Layout.PAGE_WIDTH, Layout.HEADER_HEIGHT, fill=1, stroke=0)
         
-        # Yellow horizontal logo in header
+        # White horizontal logo in header (smaller to fit reduced header)
         if logo_path and os.path.exists(logo_path):
             try:
-                logo_width = 140
-                logo_height = 45
-                x = Layout.MARGIN_LEFT
-                y = Layout.PAGE_HEIGHT - Layout.HEADER_HEIGHT + 17
+                logo_width = 100  # Reduced from 140
+                logo_height = 25  # Reduced from 45
+                x = Layout.MARGIN_LEFT - 10
+                y = Layout.PAGE_HEIGHT - Layout.HEADER_HEIGHT + 5
                 canvas_obj.drawImage(logo_path, x, y, width=logo_width, height=logo_height,
                                    mask='auto', preserveAspectRatio=True)
             except Exception as e:

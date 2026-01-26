@@ -73,7 +73,7 @@ class Layout:
     MARGIN_RIGHT = 72  # 1 inch
     
     # Header/Footer
-    HEADER_HEIGHT = 80
+    HEADER_HEIGHT = 35  # Reduced from 80 to avoid covering document text
     FOOTER_HEIGHT = 50
     
     # Content Area
@@ -176,12 +176,12 @@ class DocumentTheme:
         'background': BrandColors.BRAND_PURPLE,
         'title_color': BrandColors.WHITE,
         'subtitle_color': BrandColors.WHITE,
-        'logo': 'sparken-logo-horizontal-yellow.png'  # Yellow logo on purple
+        'logo': 'sparken-logo-horizontal-white.png'  # White logo on purple
     }
     
     CREATIVE = {
         'background': BrandColors.BRAND_YELLOW,
         'title_color': BrandColors.BRAND_PURPLE,
         'subtitle_color': BrandColors.BRAND_PURPLE,
-        'logo': 'sparken logo horizontal cropped.png'  # Purple logo on yellow
+        'logo': 'sparken-logo-horizontal-white.png'  # White logo for consistency
     }

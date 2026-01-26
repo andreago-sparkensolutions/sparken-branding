@@ -192,7 +192,7 @@ class SparkEnPDFGenerator:
         
         # Get logo paths
         logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public')
-        horizontal_logo = os.path.join(logo_dir, 'sparken-logo-horizontal-yellow.png')
+        horizontal_logo = os.path.join(logo_dir, 'sparken-logo-horizontal-white.png')
         vertical_logo = os.path.join(logo_dir, 'sparken logo-vertical-cropped.png')
         
         # Add watermark first (so it's behind content)
@@ -212,10 +212,8 @@ class SparkEnPDFGenerator:
         logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public')
         theme = self.cover_data.get('theme', 'formal')
         
-        if theme == 'formal':
-            logo_path = os.path.join(logo_dir, 'sparken-logo-horizontal-yellow.png')
-        else:
-            logo_path = os.path.join(logo_dir, 'sparken logo horizontal cropped.png')
+        # Use white logo for both themes for consistency
+        logo_path = os.path.join(logo_dir, 'sparken-logo-horizontal-white.png')
         
         CoverPageComponent.create(
             canvas_obj,
