@@ -164,6 +164,7 @@ class SparkEnPDFGenerator:
                 self.add_cover_page()
             else:
                 # Update existing cover data with parsed title (parsed title takes precedence)
+                print(f"Updating cover title from '{self.cover_data.get('title')}' to '{self.metadata['title']}'", file=sys.stderr)
                 self.cover_data['title'] = self.metadata['title']
                 if self.metadata.get('subtitle'):
                     self.cover_data['subtitle'] = self.metadata['subtitle']
@@ -290,19 +291,23 @@ class SparkEnPDFGenerator:
 def main():
     """Main entry point for command-line usage"""
     # Read input from stdin or file
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 1 and sys.argv[1] != '-':
         input_file = sys.argv[1]
         with open(input_file, 'r', encoding='utf-8') as f:
             markdown_text = f.read()
+        metadata_arg_index = 2
     else:
+        # Read from stdin (either no args or first arg is '-')
         markdown_text = sys.stdin.read()
+        metadata_arg_index = 2
     
     # Parse metadata if JSON is provided
     metadata = {}
-    if len(sys.argv) > 2:
+    if len(sys.argv) > metadata_arg_index:
         try:
-            metadata = json.loads(sys.argv[2])
-        except:
+            metadata = json.loads(sys.argv[metadata_arg_index])
+        except Exception as e:
+            print(f"Warning: Could not parse metadata: {e}", file=sys.stderr)
             pass
     
     # Generate PDF
@@ -311,6 +316,7 @@ def main():
     
     # Add cover page if metadata provided
     if metadata.get('title'):
+        print(f"Creating cover with API title: {metadata.get('title')}", file=sys.stderr)
         generator.add_cover_page(
             metadata.get('title'),
             metadata.get('subtitle', ''),
@@ -319,6 +325,10 @@ def main():
     
     # Add content
     generator.add_content_from_markdown(markdown_text)
+    
+    # Debug: print final cover title
+    if generator.has_cover:
+        print(f"Final cover title: {generator.cover_data.get('title')}", file=sys.stderr)
     
     # Generate and output
     pdf_bytes = generator.generate()
