@@ -77,17 +77,21 @@ If you need to add any secrets or API keys:
 - TypeScript PDF overlay branding (pdf-lib)
 - Next.js frontend and API routes
 - Static file serving (logos, etc.)
+- Upload existing PDFs to add Sparken branding
 
-⚠️ **Python Generator on Vercel:**
-Vercel's serverless functions have Python 3.9 available, but with limitations:
-- Functions timeout after 10 seconds (Hobby plan) or 60 seconds (Pro plan)
-- Python packages must be compatible with the serverless environment
-- ReportLab should work, but complex PDFs might hit the timeout
+⚠️ **Python Generator NOT Available on Vercel:**
+Vercel uses a managed Python environment that doesn't allow installing custom packages like ReportLab. The app automatically disables the Python generator when running on Vercel.
 
-**If Python doesn't work on Vercel**, you have options:
-1. Use Railway, Render, or Fly.io (better Python support)
-2. Keep Python for local use only
-3. Use Vercel just for the TypeScript overlay functionality
+**What this means:**
+- ✅ You CAN upload existing PDFs and add Sparken branding (TypeScript overlay)
+- ❌ You CANNOT create new PDFs from markdown files on Vercel
+- ✅ Python generator still works perfectly on your local machine
+
+**If you need full Python support**, consider these alternatives:
+1. **Railway** (https://railway.app) - Great Python support, easy deployment
+2. **Render** (https://render.com) - Free tier with full Python package installation
+3. **Fly.io** (https://fly.io) - Full container support for both TypeScript and Python
+4. **Keep Python local** - Use Vercel for PDF overlays, run Python generator on your machine
 
 ---
 
