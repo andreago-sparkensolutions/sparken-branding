@@ -75,7 +75,7 @@ async function createCoverPage(
   }
   
   // Footer tagline
-  const tagline = 'DIGITAL MARKETING AGENCY';
+  const tagline = 'SCIENCE-POWERED CREATIVE STUDIO';
   const taglineSize = 12;
   const taglineWidth = helvetica.widthOfTextAtSize(tagline, taglineSize);
   coverPage.drawText(tagline, {

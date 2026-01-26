@@ -45,8 +45,146 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
   let page = pdfDoc.addPage([pageWidth, pageHeight]);
   let yPosition = pageHeight - margin - 80; // Leave space for header/logo
   
-  for (let i = 0; i < lines.length; i++) {
+  // Helper function to detect if we're in a table
+  const isTableLine = (line: string) => line.trim().startsWith('|');
+  const isTableSeparator = (line: string) => /^\|[\s:-]+\|/.test(line.trim());
+  
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
+    
+    // Check if this is the start of a table
+    if (isTableLine(line) && i + 1 < lines.length) {
+      // Collect all table rows
+      const tableRows: string[][] = [];
+      let hasHeader = false;
+      
+      while (i < lines.length && isTableLine(lines[i])) {
+        const currentLine = lines[i].trim();
+        
+        // Skip separator rows but note if we've seen one (indicates header)
+        if (isTableSeparator(currentLine)) {
+          hasHeader = tableRows.length > 0;
+          i++;
+          continue;
+        }
+        
+        // Parse row
+        const cells = currentLine
+          .split('|')
+          .slice(1, -1) // Remove empty first/last elements
+          .map(cell => cell.trim());
+        
+        if (cells.length > 0 && cells.some(cell => cell.length > 0)) {
+          tableRows.push(cells);
+        }
+        i++;
+      }
+      
+      // Draw the table
+      if (tableRows.length > 0) {
+        const numCols = tableRows[0].length;
+        const colWidth = maxWidth / numCols;
+        const rowHeight = lineHeight * 1.5;
+        
+        // Check if table fits on page
+        const tableHeight = tableRows.length * rowHeight;
+        if (yPosition - tableHeight < margin + 50) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          yPosition = pageHeight - margin - 80;
+        }
+        
+        // Draw table
+        for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
+          const row = tableRows[rowIdx];
+          const isHeader = hasHeader && rowIdx === 0;
+          
+          // Draw row background
+          if (isHeader) {
+            page.drawRectangle({
+              x: margin,
+              y: yPosition - rowHeight + 4,
+              width: maxWidth,
+              height: rowHeight,
+              color: DEEP_COGNITIVE_PURPLE,
+            });
+          } else if (rowIdx % 2 === 1) {
+            page.drawRectangle({
+              x: margin,
+              y: yPosition - rowHeight + 4,
+              width: maxWidth,
+              height: rowHeight,
+              color: SOFT_GRAY,
+            });
+          }
+          
+          // Draw cells
+          for (let colIdx = 0; colIdx < row.length; colIdx++) {
+            const cellText = row[colIdx];
+            const cellX = margin + (colIdx * colWidth) + 8;
+            const cellY = yPosition - (rowHeight / 2) - 2;
+            
+            const cellFont = isHeader ? boldFont : font;
+            const cellColor = isHeader ? rgb(1, 1, 1) : TEXT_BLACK;
+            const cellSize = isHeader ? fontSize : fontSize - 1;
+            
+            // Wrap text if too long
+            const words = cellText.split(' ');
+            let currentLine = '';
+            let lines: string[] = [];
+            
+            for (const word of words) {
+              const testLine = currentLine ? `${currentLine} ${word}` : word;
+              const textWidth = cellFont.widthOfTextAtSize(testLine, cellSize);
+              
+              if (textWidth > colWidth - 16) {
+                if (currentLine) lines.push(currentLine);
+                currentLine = word;
+              } else {
+                currentLine = testLine;
+              }
+            }
+            if (currentLine) lines.push(currentLine);
+            
+            // Draw text (only first line for now to keep simple)
+            if (lines.length > 0) {
+              page.drawText(lines[0], {
+                x: cellX,
+                y: cellY,
+                size: cellSize,
+                font: cellFont,
+                color: cellColor,
+              });
+            }
+          }
+          
+          // Draw row border
+          page.drawLine({
+            start: { x: margin, y: yPosition - rowHeight + 4 },
+            end: { x: margin + maxWidth, y: yPosition - rowHeight + 4 },
+            thickness: 0.5,
+            color: DEEP_COGNITIVE_PURPLE,
+            opacity: 0.3,
+          });
+          
+          yPosition -= rowHeight;
+        }
+        
+        // Add spacing after table
+        yPosition -= lineHeight;
+        
+        // Check if we need a new page
+        if (yPosition < margin + 50) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          yPosition = pageHeight - margin - 80;
+        }
+      }
+      
+      continue; // Skip to next line after table
+    }
+    
+    // Regular line processing
+    i++; // Increment for non-table lines
     
     // Skip empty lines but add spacing
     if (!line.trim()) {
@@ -82,9 +220,10 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
       }
     }
     
-    // Check for bold text
+    // Check for bold text - only use bold for headers and explicitly bolded text
+    const isBold = line.includes('**') && !headerMatch;
     cleanLine = cleanLine.replace(/\*\*(.+?)\*\*/g, '$1');
-    if (line.includes('**')) {
+    if (isBold) {
       currentFont = boldFont;
     }
     

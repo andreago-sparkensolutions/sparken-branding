@@ -64,7 +64,7 @@ class CoverPageComponent:
         # Footer tagline
         canvas_obj.setFillColor(theme['subtitle_color'])
         canvas_obj.setFont(Typography.BODY_FONT, Typography.BODY_SIZE)
-        tagline = "DIGITAL MARKETING AGENCY"
+        tagline = "SCIENCE-POWERED CREATIVE STUDIO"
         tagline_width = canvas_obj.stringWidth(tagline, Typography.BODY_FONT, Typography.BODY_SIZE)
         canvas_obj.drawString((Layout.PAGE_WIDTH - tagline_width) / 2, 100, tagline)
 

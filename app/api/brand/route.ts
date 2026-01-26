@@ -41,9 +41,18 @@ export async function POST(request: NextRequest) {
           const titleMatch = markdownText.match(/^#\s+(.+)$/m);
           const subtitleMatch = markdownText.match(/^##\s+(.+)$/m);
           
+          // If no title found in markdown, try to extract from filename
+          let title = titleMatch ? titleMatch[1].trim() : undefined;
+          if (!title) {
+            title = file.name
+              .replace(/\.(md|txt)$/i, '')
+              .replace(/[-_]/g, ' ')
+              .replace(/\b\w/g, (char) => char.toUpperCase());
+          }
+          
           brandedPdfBytes = await generatePythonPDF(markdownText, {
-            title: titleMatch ? titleMatch[1] : undefined,
-            subtitle: subtitleMatch ? subtitleMatch[1] : undefined,
+            title: title,
+            subtitle: subtitleMatch ? subtitleMatch[1].trim() : undefined,
             theme: 'formal' // Default to formal (purple) theme
           });
           console.log('Python PDF generated, size:', brandedPdfBytes.length);
