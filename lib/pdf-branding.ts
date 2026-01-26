@@ -49,17 +49,65 @@ async function createCoverPage(
     });
   }
   
-  // Title (centered, upper-case, white)
+  // Title (centered, upper-case, white) with text wrapping
   const titleText = title.toUpperCase();
-  const titleSize = 36;
-  const titleWidth = helveticaBold.widthOfTextAtSize(titleText, titleSize);
-  coverPage.drawText(titleText, {
-    x: (width - titleWidth) / 2,
-    y: height / 2 + 50,
-    size: titleSize,
-    font: helveticaBold,
-    color: WHITE,
-  });
+  let titleSize = 36;
+  const maxTitleWidth = width - 100; // Leave 50px margin on each side
+  
+  // Check if title fits, if not reduce size or wrap
+  let titleWidth = helveticaBold.widthOfTextAtSize(titleText, titleSize);
+  
+  // If title is too wide, reduce font size
+  while (titleWidth > maxTitleWidth && titleSize > 20) {
+    titleSize -= 2;
+    titleWidth = helveticaBold.widthOfTextAtSize(titleText, titleSize);
+  }
+  
+  // If still too wide, wrap text
+  if (titleWidth > maxTitleWidth) {
+    const words = titleText.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = helveticaBold.widthOfTextAtSize(testLine, titleSize);
+      
+      if (testWidth > maxTitleWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    
+    // Draw multi-line title
+    const lineHeight = titleSize * 1.2;
+    const totalHeight = lines.length * lineHeight;
+    let yPos = height / 2 + 50 + (totalHeight / 2) - lineHeight;
+    
+    for (const line of lines) {
+      const lineWidth = helveticaBold.widthOfTextAtSize(line, titleSize);
+      coverPage.drawText(line, {
+        x: (width - lineWidth) / 2,
+        y: yPos,
+        size: titleSize,
+        font: helveticaBold,
+        color: WHITE,
+      });
+      yPos -= lineHeight;
+    }
+  } else {
+    // Draw single line title
+    coverPage.drawText(titleText, {
+      x: (width - titleWidth) / 2,
+      y: height / 2 + 50,
+      size: titleSize,
+      font: helveticaBold,
+      color: WHITE,
+    });
+  }
   
   // Subtitle if provided
   if (subtitle) {

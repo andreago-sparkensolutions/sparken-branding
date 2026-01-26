@@ -47,12 +47,51 @@ class CoverPageComponent:
             except Exception as e:
                 print(f"Could not load logo: {e}")
         
-        # Title (centered, middle)
+        # Title (centered, middle) with text wrapping
         canvas_obj.setFillColor(theme['title_color'])
         canvas_obj.setFont(Typography.DISPLAY_FONT, Typography.COVER_TITLE_SIZE)
         title_text = title.upper()
-        title_width = canvas_obj.stringWidth(title_text, Typography.DISPLAY_FONT, Typography.COVER_TITLE_SIZE)
-        canvas_obj.drawString((Layout.PAGE_WIDTH - title_width) / 2, Layout.PAGE_HEIGHT / 2 + 50, title_text)
+        max_title_width = Layout.PAGE_WIDTH - 100  # Leave margins
+        
+        title_size = Typography.COVER_TITLE_SIZE
+        title_width = canvas_obj.stringWidth(title_text, Typography.DISPLAY_FONT, title_size)
+        
+        # If title is too wide, reduce font size
+        while title_width > max_title_width and title_size > 20:
+            title_size -= 2
+            title_width = canvas_obj.stringWidth(title_text, Typography.DISPLAY_FONT, title_size)
+        
+        # If still too wide, wrap text
+        if title_width > max_title_width:
+            words = title_text.split(' ')
+            lines = []
+            current_line = ''
+            
+            for word in words:
+                test_line = f"{current_line} {word}".strip()
+                test_width = canvas_obj.stringWidth(test_line, Typography.DISPLAY_FONT, title_size)
+                
+                if test_width > max_title_width and current_line:
+                    lines.append(current_line)
+                    current_line = word
+                else:
+                    current_line = test_line
+            
+            if current_line:
+                lines.append(current_line)
+            
+            # Draw multi-line title
+            line_height = title_size * 1.2
+            total_height = len(lines) * line_height
+            y_pos = Layout.PAGE_HEIGHT / 2 + 50 + (total_height / 2) - line_height
+            
+            for line in lines:
+                line_width = canvas_obj.stringWidth(line, Typography.DISPLAY_FONT, title_size)
+                canvas_obj.drawString((Layout.PAGE_WIDTH - line_width) / 2, y_pos, line)
+                y_pos -= line_height
+        else:
+            # Draw single line title
+            canvas_obj.drawString((Layout.PAGE_WIDTH - title_width) / 2, Layout.PAGE_HEIGHT / 2 + 50, title_text)
         
         # Subtitle
         if subtitle:

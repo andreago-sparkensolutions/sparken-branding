@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
         addCoverPage: true,
         title: titleFromFilename,
-        subtitle: 'Prepared by Sparken'
+        subtitle: 'Prepared by Sparken Solutions'
       });
       console.log('Branding complete, final size:', brandedPdfBytes.length);
     } else {
