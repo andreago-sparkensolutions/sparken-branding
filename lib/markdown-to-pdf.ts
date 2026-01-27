@@ -113,6 +113,17 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&nbsp;/g, ' ')
+    // FALLBACK: Remove any remaining markdown syntax that wasn't converted
+    // Remove markdown links [text](url)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove markdown bold **text** or __text__
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    // Remove markdown italic *text* or _text_ (but be careful not to match other uses)
+    .replace(/\*([^*\n]+)\*/g, '$1')
+    .replace(/_([^_\n]+)_/g, '$1')
+    // Remove markdown code `text`
+    .replace(/`([^`]+)`/g, '$1')
     // Clean up whitespace
     .replace(/  +/g, ' ')
     .replace(/\n\n\n+/g, '\n\n')
