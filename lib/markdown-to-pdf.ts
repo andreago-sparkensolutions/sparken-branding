@@ -159,6 +159,8 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
   // Parse markdown to clean lines
   const lines = await markdownToPlainText(markdownText);
   
+  console.log('[PDF] Converting', lines.length, 'lines to PDF');
+  
   const pageWidth = 612;  // 8.5 inches
   const pageHeight = 792; // 11 inches
   const margin = 72;      // 1 inch margins
