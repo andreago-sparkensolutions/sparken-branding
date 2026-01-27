@@ -41,6 +41,10 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
     .replace(/\{#[^}]+\}/g, '')
     // Remove page break markers like "-- 1 of 15 --"
     .replace(/^--\s+\d+\s+of\s+\d+\s+--$/gm, '')
+    // Fix broken markdown links split across lines (e.g., **[text\n1](link)** -> **[text 1](link)**)
+    .replace(/\[([^\]]+)\n+([^\]]*)\]\(([^)]+)\)/g, '[$1 $2]($3)')
+    // Remove tabs (they break WinAnsi encoding anyway)
+    .replace(/\t/g, ' ')
     // Clean up multiple blank lines
     .replace(/\n\n\n+/g, '\n\n');
   
