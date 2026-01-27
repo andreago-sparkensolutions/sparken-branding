@@ -21,22 +21,15 @@ function sanitizeText(text: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== Branding API called ===');
-    console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Local');
-    console.log('CWD:', process.cwd());
-    
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
-      console.error('No file provided');
       return NextResponse.json(
         { error: 'No file provided' },
         { status: 400 }
       );
     }
-
-    console.log('File received:', file.name, 'Type:', file.type, 'Size:', file.size);
 
     let brandedPdfBytes: Uint8Array;
 
@@ -91,12 +84,8 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
-        console.log('Python not available, using TypeScript converter');
-        console.log('Starting TypeScript fallback path');
-        
         // Fallback to TypeScript converter
         const markdownText = await file.text();
-        console.log('Markdown text read, length:', markdownText.length);
         
         // Extract title from markdown
         const titleMatch = markdownText.match(/^#\s+(.+)$/m);
@@ -104,19 +93,12 @@ export async function POST(request: NextRequest) {
         const title = sanitizeText(titleMatch ? titleMatch[1].trim() : 'Document');
         const subtitle = sanitizeText(subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions');
         
-        console.log('Extracted title:', title, 'subtitle:', subtitle);
-        console.log('About to call convertMarkdownToPdf');
-        
         const pdfBytes = await convertMarkdownToPdf(markdownText);
-        console.log('convertMarkdownToPdf completed, PDF size:', pdfBytes.length);
-        console.log('About to call applySparkEnBranding');
-        
         brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
           addCoverPage: true,
           title: title,
           subtitle: subtitle
         });
-        console.log('applySparkEnBranding completed, branded PDF size:', brandedPdfBytes.length);
       }
     } else if (file.name.toLowerCase().endsWith('.pdf')) {
       console.log('Processing as existing PDF file - using TypeScript overlay');

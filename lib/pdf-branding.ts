@@ -146,15 +146,9 @@ export async function applySparkEnBranding(
   }
 ): Promise<Uint8Array> {
   try {
-    console.log('Starting PDF branding process...');
-    console.log('PDF bytes length:', pdfBytes.length);
-    console.log('CWD:', process.cwd());
-    console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Local');
-    
     // Load the PDF document
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const pages = pdfDoc.getPages();
-    console.log(`PDF loaded: ${pages.length} pages`);
     
     // Embed fonts
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -167,32 +161,16 @@ export async function applySparkEnBranding(
     // Load white horizontal logo for header
     const horizontalLogoPath = path.join(process.cwd(), 'public', 'sparken-logo-horizontal-white.png');
     try {
-      console.log('Loading white horizontal logo from:', horizontalLogoPath);
-      console.log('Logo file exists:', fs.existsSync(horizontalLogoPath));
-      
       if (fs.existsSync(horizontalLogoPath)) {
         const logoBytes = fs.readFileSync(horizontalLogoPath);
-        console.log(`White horizontal logo loaded: ${logoBytes.length} bytes`);
         try {
           horizontalLogoImage = await pdfDoc.embedPng(logoBytes);
-          console.log('White horizontal logo embedded successfully');
         } catch (error) {
           console.error('Failed to embed white horizontal logo:', error);
-        }
-      } else {
-        console.warn('White horizontal logo file not found at:', horizontalLogoPath);
-        // Try alternative path for Vercel
-        const altPath = path.join(process.cwd(), '.next', 'static', 'media', 'sparken-logo-horizontal-white.png');
-        console.log('Trying alternative path:', altPath);
-        if (fs.existsSync(altPath)) {
-          const logoBytes = fs.readFileSync(altPath);
-          horizontalLogoImage = await pdfDoc.embedPng(logoBytes);
-          console.log('White horizontal logo loaded from alternative path');
         }
       }
     } catch (error) {
       console.error('White horizontal logo loading error:', error);
-      console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     }
     
     // Load vertical logo for watermark pattern
