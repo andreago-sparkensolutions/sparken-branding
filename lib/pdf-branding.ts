@@ -165,6 +165,9 @@ export async function applySparkEnBranding(
     const horizontalLogoPath = path.join(process.cwd(), 'public', 'sparken-logo-horizontal-white.png');
     try {
       console.log('Loading white horizontal logo from:', horizontalLogoPath);
+      console.log('Current working directory:', process.cwd());
+      console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Local');
+      
       if (fs.existsSync(horizontalLogoPath)) {
         const logoBytes = fs.readFileSync(horizontalLogoPath);
         console.log(`White horizontal logo loaded: ${logoBytes.length} bytes`);
@@ -174,13 +177,24 @@ export async function applySparkEnBranding(
         } catch (error) {
           console.error('Failed to embed white horizontal logo:', error);
         }
+      } else {
+        console.warn('White horizontal logo file not found at:', horizontalLogoPath);
+        // Try alternative path for Vercel
+        const altPath = path.join(process.cwd(), '.next', 'static', 'media', 'sparken-logo-horizontal-white.png');
+        console.log('Trying alternative path:', altPath);
+        if (fs.existsSync(altPath)) {
+          const logoBytes = fs.readFileSync(altPath);
+          horizontalLogoImage = await pdfDoc.embedPng(logoBytes);
+          console.log('White horizontal logo loaded from alternative path');
+        }
       }
     } catch (error) {
       console.error('White horizontal logo loading error:', error);
+      console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     }
     
     // Load vertical logo for watermark pattern
-    const verticalLogoPath = path.join(process.cwd(), 'public', 'sparken logo-vertical-cropped.png');
+    const verticalLogoPath = path.join(process.cwd(), 'public', 'sparken-logo-vertical.png');
     try {
       console.log('Loading vertical logo from:', verticalLogoPath);
       if (fs.existsSync(verticalLogoPath)) {
@@ -192,9 +206,12 @@ export async function applySparkEnBranding(
         } catch (error) {
           console.error('Failed to embed vertical logo:', error);
         }
+      } else {
+        console.warn('Vertical logo file not found at:', verticalLogoPath);
       }
     } catch (error) {
       console.error('Vertical logo loading error:', error);
+      console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     }
 
     if (!horizontalLogoImage && !verticalLogoImage) {

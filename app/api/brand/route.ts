@@ -142,8 +142,22 @@ export async function POST(request: NextRequest) {
     console.error('=== Branding API error ===');
     console.error('Error details:', error);
     console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    
+    // More detailed error for debugging
+    const errorDetails = {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    };
+    
     return NextResponse.json(
-      { error: 'Failed to apply branding', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to apply branding', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        debug: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+      },
       { status: 500 }
     );
   }
