@@ -33,26 +33,14 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
   fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:31',message:'markdownToPlainText input',data:{markdownLength:markdown.length,firstChars:markdown.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
   // #endregion
   
-  // First, clean up common markdown artifacts that marked doesn't handle
+  // First, clean up markdown artifacts that we don't want converted
   let cleaned = markdown
     // Remove HTML comments
     .replace(/<!--[\s\S]*?-->/g, '')
     // Remove custom anchors {#id}
     .replace(/\{#[^}]+\}/g, '')
-    // Remove horizontal rules
-    .replace(/^---+$/gm, '\n')
-    .replace(/^___+$/gm, '\n')
-    .replace(/^\*\*\*+$/gm, '\n')
-    // Remove page break markers like "-- 1 of 17 --"
+    // Remove page break markers like "-- 1 of 15 --"
     .replace(/^--\s+\d+\s+of\s+\d+\s+--$/gm, '')
-    // Remove escaped characters
-    .replace(/\\([*_~`\-\\#\[\]])/g, '$1')
-    // Clean up HTML entities
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
     // Clean up multiple blank lines
     .replace(/\n\n\n+/g, '\n\n');
   
@@ -67,45 +55,68 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
   fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:61',message:'HTML from marked',data:{htmlLength:html.length,firstChars:html.substring(0,1000),sampleTable:html.match(/<table[\s\S]{0,300}/)?.[0]||'no-table'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
   // #endregion
   
-  // Strip HTML tags and convert to plain text
+  // Convert HTML to plain text with proper formatting
   let plainText = html
-    // Convert headers
-    .replace(/<h([1-6])>(.*?)<\/h\1>/g, (_, level, text) => {
-      return '\n' + '#'.repeat(parseInt(level)) + ' ' + text + '\n';
-    })
-    // Convert paragraphs
-    .replace(/<p>(.*?)<\/p>/g, '$1\n')
-    // Convert lists
-    .replace(/<li>(.*?)<\/li>/g, '• $1\n')
-    .replace(/<\/ul>/g, '\n')
-    .replace(/<\/ol>/g, '\n')
-    .replace(/<ul>/g, '')
-    .replace(/<ol>/g, '')
-    // Convert line breaks
-    .replace(/<br\s*\/?>/g, '\n')
-    // Convert tables (basic)
-    .replace(/<table>[\s\S]*?<\/table>/g, (match) => {
-      // Simple table to text conversion
-      return match
-        .replace(/<\/?table>/g, '')
-        .replace(/<\/?thead>/g, '')
-        .replace(/<\/?tbody>/g, '')
-        .replace(/<\/?tr>/g, '\n')
-        .replace(/<\/?th>/g, ' | ')
-        .replace(/<\/?td>/g, ' | ');
-    })
-    // Remove all remaining HTML tags
-    .replace(/<[^>]+>/g, '')
-    // Decode HTML entities again after stripping tags
-    .replace(/&nbsp;/g, ' ')
+    // First decode HTML entities
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    // Convert strong/bold tags
+    .replace(/<\/?strong>/g, '')
+    .replace(/<\/?b>/g, '')
+    // Convert emphasis/italic tags
+    .replace(/<\/?em>/g, '')
+    .replace(/<\/?i>/g, '')
+    // Convert code tags
+    .replace(/<\/?code>/g, '')
+    // Convert links (keep just the text, discard href)
+    .replace(/<a[^>]*>(.*?)<\/a>/g, '$1')
+    // Convert headers to text with # prefix
+    .replace(/<h1[^>]*>(.*?)<\/h1>/g, '\n# $1\n')
+    .replace(/<h2[^>]*>(.*?)<\/h2>/g, '\n## $1\n')
+    .replace(/<h3[^>]*>(.*?)<\/h3>/g, '\n### $1\n')
+    .replace(/<h4[^>]*>(.*?)<\/h4>/g, '\n#### $1\n')
+    .replace(/<h5[^>]*>(.*?)<\/h5>/g, '\n##### $1\n')
+    .replace(/<h6[^>]*>(.*?)<\/h6>/g, '\n###### $1\n')
+    // Convert paragraphs
+    .replace(/<p[^>]*>(.*?)<\/p>/g, '$1\n\n')
+    // Convert line breaks
+    .replace(/<br\s*\/?>/g, '\n')
+    // Convert lists
+    .replace(/<li[^>]*>(.*?)<\/li>/g, '• $1\n')
+    .replace(/<\/?ul[^>]*>/g, '')
+    .replace(/<\/?ol[^>]*>/g, '')
+    // Convert tables to simple text format
+    .replace(/<table[^>]*>[\s\S]*?<\/table>/g, (table) => {
+      // Extract rows
+      const rows = table.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) || [];
+      return rows.map(row => {
+        // Extract cells (th or td)
+        const cells = row.match(/<t[hd][^>]*>(.*?)<\/t[hd]>/g) || [];
+        const cellTexts = cells.map(cell => 
+          cell.replace(/<t[hd][^>]*>(.*?)<\/t[hd]>/, '$1').trim()
+        );
+        return cellTexts.join(' | ');
+      }).join('\n') + '\n\n';
+    })
+    // Remove horizontal rules
+    .replace(/<hr\s*\/?>/g, '')
+    // Remove any remaining HTML tags
+    .replace(/<[^>]+>/g, '')
+    // Decode HTML entities again (in case they were inside tags)
     .replace(/&quot;/g, '"')
-    // Clean up multiple spaces
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    // Clean up whitespace
     .replace(/  +/g, ' ')
-    // Clean up multiple newlines
-    .replace(/\n\n\n+/g, '\n\n');
+    .replace(/\n\n\n+/g, '\n\n')
+    .trim();
   
   // #region agent log
   fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:110',message:'PlainText after HTML stripping',data:{plainTextLength:plainText.length,firstChars:plainText.substring(0,1000),sampleLines:plainText.split('\n').slice(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,D'})}).catch(()=>{});
