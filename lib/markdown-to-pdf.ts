@@ -72,7 +72,7 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
     // Convert line breaks
     .replace(/<br\s*\/?>/g, '\n')
     // Convert tables (basic)
-    .replace(/<table>(.*?)<\/table>/gs, (match) => {
+    .replace(/<table>[\s\S]*?<\/table>/g, (match) => {
       // Simple table to text conversion
       return match
         .replace(/<\/?table>/g, '')
