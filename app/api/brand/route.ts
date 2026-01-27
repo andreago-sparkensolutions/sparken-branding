@@ -7,17 +7,13 @@ import { generatePythonPDF, checkPythonAvailability } from '@/lib/python-bridge'
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
-  // #region agent log
-  fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:9',message:'API_ENTRY',data:{url:request.url,method:request.method,env:process.env.VERCEL?'vercel':'local',cwd:process.cwd()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,E'})}).catch(()=>{});
-  // #endregion
   try {
     console.log('=== Branding API called ===');
+    console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Local');
+    console.log('CWD:', process.cwd());
+    
     const formData = await request.formData();
     const file = formData.get('file') as File;
-
-    // #region agent log
-    fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:20',message:'FILE_CHECK',data:{hasFile:!!file,fileName:file?.name,fileType:file?.type,fileSize:file?.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
 
     if (!file) {
       console.error('No file provided');
@@ -83,15 +79,11 @@ export async function POST(request: NextRequest) {
         }
       } else {
         console.log('Python not available, using TypeScript converter');
-        // #region agent log
-        fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:78',message:'TYPESCRIPT_FALLBACK',data:{pythonAvailable:false,env:process.env.VERCEL?'vercel':'local'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,D'})}).catch(()=>{});
-        // #endregion
+        console.log('Starting TypeScript fallback path');
+        
         // Fallback to TypeScript converter
         const markdownText = await file.text();
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:85',message:'MARKDOWN_TEXT_READ',data:{length:markdownText.length,preview:markdownText.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
+        console.log('Markdown text read, length:', markdownText.length);
         
         // Extract title from markdown
         const titleMatch = markdownText.match(/^#\s+(.+)$/m);
@@ -99,21 +91,19 @@ export async function POST(request: NextRequest) {
         const title = titleMatch ? titleMatch[1].trim() : 'Document';
         const subtitle = subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions';
         
-        // #region agent log
-        fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:95',message:'BEFORE_CONVERT_MD',data:{title,subtitle,textLength:markdownText.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
+        console.log('Extracted title:', title, 'subtitle:', subtitle);
+        console.log('About to call convertMarkdownToPdf');
+        
         const pdfBytes = await convertMarkdownToPdf(markdownText);
-        // #region agent log
-        fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:100',message:'AFTER_CONVERT_MD',data:{pdfSize:pdfBytes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,D'})}).catch(()=>{});
-        // #endregion
+        console.log('convertMarkdownToPdf completed, PDF size:', pdfBytes.length);
+        console.log('About to call applySparkEnBranding');
+        
         brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
           addCoverPage: true,
           title: title,
           subtitle: subtitle
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:108',message:'AFTER_BRANDING',data:{brandedSize:brandedPdfBytes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,D'})}).catch(()=>{});
-        // #endregion
+        console.log('applySparkEnBranding completed, branded PDF size:', brandedPdfBytes.length);
       }
     } else if (file.name.toLowerCase().endsWith('.pdf')) {
       console.log('Processing as existing PDF file - using TypeScript overlay');
@@ -162,9 +152,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    // #region agent log
-    fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:141',message:'ERROR_CAUGHT',data:{errorMessage:error instanceof Error?error.message:String(error),errorName:error instanceof Error?error.name:'Unknown',stack:error instanceof Error?error.stack?.substring(0,500):undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-    // #endregion
     console.error('=== Branding API error ===');
     console.error('Error details:', error);
     console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace');
@@ -176,13 +163,16 @@ export async function POST(request: NextRequest) {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined,
+      cwd: process.cwd(),
+      env: process.env.VERCEL ? 'vercel' : 'local',
+      nodeVersion: process.version,
     };
     
     return NextResponse.json(
       { 
         error: 'Failed to apply branding', 
         details: error instanceof Error ? error.message : 'Unknown error',
-        debug: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+        debug: errorDetails  // Always return debug info to see what's failing
       },
       { status: 500 }
     );
