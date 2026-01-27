@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { applySparkEnBranding } from '@/lib/pdf-branding';
 import { convertMarkdownToPdf } from '@/lib/markdown-to-pdf';
 import { generatePythonPDF, checkPythonAvailability } from '@/lib/python-bridge';
+import { cleanPdfArtifacts } from '@/lib/clean-text';
 
 // Force Node.js runtime for fs access
 export const runtime = 'nodejs';
@@ -68,7 +69,10 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           console.error('Python PDF generation failed, falling back to TypeScript:', error);
           // Fallback to TypeScript converter
-          const markdownText = await file.text();
+          let markdownText = await file.text();
+          
+          // IMPORTANT: Clean PDF artifacts before processing
+          markdownText = cleanPdfArtifacts(markdownText);
           
           // Extract title from markdown
           const titleMatch = markdownText.match(/^#\s+(.+)$/m);
@@ -85,7 +89,10 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Fallback to TypeScript converter
-        const markdownText = await file.text();
+        let markdownText = await file.text();
+        
+        // IMPORTANT: Clean PDF artifacts before processing
+        markdownText = cleanPdfArtifacts(markdownText);
         
         // Extract title from markdown
         const titleMatch = markdownText.match(/^#\s+(.+)$/m);

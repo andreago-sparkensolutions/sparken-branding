@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { marked } from 'marked';
+import { cleanPdfArtifacts } from './clean-text';
 
 // Sparken Brand Colors
 const DEEP_COGNITIVE_PURPLE = rgb(0.369, 0.333, 0.573);  // #5E5592
@@ -33,7 +34,10 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
   fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:31',message:'markdownToPlainText input',data:{markdownLength:markdown.length,firstChars:markdown.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
   // #endregion
   
-  // First, clean up markdown artifacts that we don't want converted
+  // FIRST: Clean PDF artifacts (removes page markers, footer text, etc.)
+  markdown = cleanPdfArtifacts(markdown);
+  
+  // Then, clean up other markdown artifacts
   let cleaned = markdown
     // Remove HTML comments
     .replace(/<!--[\s\S]*?-->/g, '')
