@@ -176,12 +176,12 @@ class DocumentTheme:
         'background': BrandColors.BRAND_PURPLE,
         'title_color': BrandColors.WHITE,
         'subtitle_color': BrandColors.WHITE,
-        'logo': 'sparken-logo-horizontal-white.png'  # White logo on purple
+        'logo': 'logos/sparken-logo-horizontal-white.png'  # White logo on purple
     }
     
     CREATIVE = {
         'background': BrandColors.BRAND_YELLOW,
         'title_color': BrandColors.BRAND_PURPLE,
         'subtitle_color': BrandColors.BRAND_PURPLE,
-        'logo': 'sparken-logo-horizontal-white.png'  # White logo for consistency
+        'logo': 'logos/sparken-logo-horizontal-white.png'  # White logo for consistency
     }

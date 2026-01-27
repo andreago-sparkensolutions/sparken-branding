@@ -77,28 +77,42 @@ class SparkEnPDFGenerator:
             elif line.startswith('### '):
                 content.append(('h3', line[4:]))
             
-            # Tables (simple markdown table detection)
-            elif line.startswith('|'):
+            # Tables (markdown table detection - handles both | column | and column | formats)
+            elif '|' in line:
                 table_rows = []
-                while i < len(lines) and lines[i].strip().startswith('|'):
-                    row = [cell.strip() for cell in lines[i].strip().split('|')[1:-1]]
-                    # Skip separator rows
-                    if not all(re.match(r'^[-:]+$', cell.strip()) for cell in row):
-                        # Clean markdown formatting from cells
-                        cleaned_row = []
-                        for cell in row:
-                            # Remove bold markers
-                            cell = re.sub(r'\*\*(.+?)\*\*', r'\1', cell)
-                            # Remove italic markers
-                            cell = re.sub(r'\*(.+?)\*', r'\1', cell)
-                            # Remove inline code markers
-                            cell = re.sub(r'`(.+?)`', r'\1', cell)
-                            cleaned_row.append(cell)
-                        table_rows.append(cleaned_row)
-                    i += 1
-                if table_rows:
-                    content.append(('table', table_rows))
-                i -= 1
+                # Check if this looks like a table (has multiple pipes or starts with pipe)
+                pipe_count = line.count('|')
+                if pipe_count >= 1:
+                    while i < len(lines) and '|' in lines[i].strip():
+                        current_line = lines[i].strip()
+                        
+                        # Parse row - handle both |col|col| and col|col formats
+                        if current_line.startswith('|') and current_line.endswith('|'):
+                            # Format: | col1 | col2 |
+                            row = [cell.strip() for cell in current_line.split('|')[1:-1]]
+                        else:
+                            # Format: col1 | col2 (no leading/trailing pipes)
+                            row = [cell.strip() for cell in current_line.split('|')]
+                        
+                        # Skip separator rows (lines with only dashes, colons, pipes)
+                        if row and not all(re.match(r'^[-:\s]+$', cell) for cell in row):
+                            # Clean markdown formatting from cells
+                            cleaned_row = []
+                            for cell in row:
+                                if cell:  # Skip empty cells
+                                    # Remove bold markers
+                                    cell = re.sub(r'\*\*(.+?)\*\*', r'\1', cell)
+                                    # Remove italic markers
+                                    cell = re.sub(r'\*(.+?)\*', r'\1', cell)
+                                    # Remove inline code markers
+                                    cell = re.sub(r'`(.+?)`', r'\1', cell)
+                                    cleaned_row.append(cell)
+                            if cleaned_row:  # Only add if row has content
+                                table_rows.append(cleaned_row)
+                        i += 1
+                    if table_rows:
+                        content.append(('table', table_rows))
+                    i -= 1
             
             # Callouts (lines starting with > )
             elif line.startswith('> '):
@@ -216,7 +230,7 @@ class SparkEnPDFGenerator:
         total_pages = doc.page - 1 if self.has_cover else doc.page
         
         # Get logo paths
-        logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public')
+        logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public', 'logos')
         horizontal_logo = os.path.join(logo_dir, 'sparken-logo-horizontal-white.png')
         vertical_logo = os.path.join(logo_dir, 'sparken logo-vertical-cropped.png')
         
@@ -234,7 +248,7 @@ class SparkEnPDFGenerator:
         if not self.has_cover:
             return
         
-        logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public')
+        logo_dir = os.path.join(os.path.dirname(__file__), '..', 'public', 'logos')
         theme = self.cover_data.get('theme', 'formal')
         
         # Use white logo for both themes for consistency

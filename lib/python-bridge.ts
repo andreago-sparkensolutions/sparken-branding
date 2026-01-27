@@ -12,6 +12,51 @@ export interface PythonPDFOptions {
 }
 
 /**
+ * Clean PDF text artifacts from content
+ * 
+ * @param content - Raw text content (possibly from PDF conversion)
+ * @returns Promise<string> - Cleaned text
+ */
+async function cleanPdfArtifacts(content: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const cleanScript = path.join(process.cwd(), 'python', 'clean_pdf_text.py');
+    
+    const cleanProcess = spawn('python3', [cleanScript, '-'], {
+      cwd: process.cwd()
+    });
+    
+    let cleanedText = '';
+    const errorChunks: Buffer[] = [];
+    
+    cleanProcess.stdout.on('data', (chunk: Buffer) => {
+      cleanedText += chunk.toString();
+    });
+    
+    cleanProcess.stderr.on('data', (chunk: Buffer) => {
+      errorChunks.push(chunk);
+    });
+    
+    cleanProcess.on('close', (code: number) => {
+      if (code !== 0) {
+        const errorMessage = Buffer.concat(errorChunks).toString();
+        console.warn('Cleaning script failed, using original content:', errorMessage);
+        resolve(content); // Fallback to original if cleaning fails
+        return;
+      }
+      resolve(cleanedText);
+    });
+    
+    cleanProcess.on('error', (error: Error) => {
+      console.warn('Failed to start cleaning script, using original content:', error.message);
+      resolve(content); // Fallback to original if cleaning fails
+    });
+    
+    cleanProcess.stdin.write(content);
+    cleanProcess.stdin.end();
+  });
+}
+
+/**
  * Generate a PDF using the Python ReportLab generator
  * 
  * @param markdownContent - Markdown or plain text content
@@ -22,7 +67,17 @@ export async function generatePythonPDF(
   markdownContent: string,
   options: PythonPDFOptions = {}
 ): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    // First, clean any PDF artifacts from the content
+    let cleanedContent: string;
+    try {
+      cleanedContent = await cleanPdfArtifacts(markdownContent);
+      console.log('Content cleaned. Original length:', markdownContent.length, 'Cleaned length:', cleanedContent.length);
+    } catch (error) {
+      console.warn('Failed to clean content, using original:', error);
+      cleanedContent = markdownContent;
+    }
+    
     const pythonScript = path.join(process.cwd(), 'python', 'sparken_pdf_generator.py');
     
     // Prepare metadata as JSON
@@ -68,8 +123,8 @@ export async function generatePythonPDF(
       reject(new Error(`Failed to start Python process: ${error.message}`));
     });
     
-    // Write markdown content to stdin
-    pythonProcess.stdin.write(markdownContent);
+    // Write cleaned content to stdin
+    pythonProcess.stdin.write(cleanedContent);
     pythonProcess.stdin.end();
   });
 }

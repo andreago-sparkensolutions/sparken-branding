@@ -14,7 +14,7 @@ export const SPARKEN_BRAND = {
 
   // Logo Configuration - Official Logo
   logo: {
-    path: '/sparken-logo-horizontal.png',
+    path: '/logos/sparken-logo-horizontal.png',
     width: 120,
     height: 40,
     position: {

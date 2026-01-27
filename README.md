@@ -22,6 +22,7 @@ All brand assets verified against official Sparken brandbook.
 - 📱 **Responsive Design**: Works on desktop and mobile devices
 - 🧠 **Cognitive Flow**: Reduces friction at every step
 - 🏢 **Official Logo**: Uses authentic Sparken four-pointed star logo
+- 🔧 **Auto-Cleanup**: Automatically removes PDF conversion artifacts for clean output
 
 ## Getting Started
 
@@ -44,8 +45,18 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## How to Use
 
 1. **Upload**: Drag and drop your PDF, Word, or Markdown document, or click to browse
-2. **Process**: The app automatically applies Sparken branding
-3. **Download**: Download your branded document instantly
+2. **Process**: The app automatically applies Sparken branding (and cleans any formatting issues)
+3. **Download**: Download your professionally branded document instantly
+
+### Automatic Formatting Cleanup
+
+The system automatically detects and removes common PDF conversion artifacts:
+- Link wrappers like `**[TITLE](#anchor)**`
+- Page markers like `-- 1 of 13 --`
+- Embedded footer text
+- Random symbols and TOC numbers
+
+No extra steps needed - just upload and the system handles it! See [docs/FORMATTING_FIXES_SUMMARY.md](docs/FORMATTING_FIXES_SUMMARY.md) for details.
 
 ## Branding Elements
 
@@ -71,7 +82,7 @@ All colors verified from official Sparken brandbook.
 
 ```
 sparken-branding/
-├── app/
+├── app/                    # Next.js application
 │   ├── api/
 │   │   └── brand/          # PDF branding API endpoint
 │   ├── components/
@@ -80,12 +91,35 @@ sparken-branding/
 │   ├── layout.tsx          # Root layout
 │   ├── page.tsx            # Main page
 │   └── globals.css         # Global styles
-├── lib/
+├── lib/                    # Core libraries
 │   ├── constants.ts        # Sparken brand constants
 │   ├── markdown-to-pdf.ts  # Markdown to PDF converter
-│   └── pdf-branding.ts     # PDF branding engine
-└── public/
-    └── sparken-logo.svg    # Sparken logo
+│   ├── pdf-branding.ts     # PDF branding engine
+│   └── python-bridge.ts    # Python integration layer
+├── python/                 # Python PDF system
+│   ├── sparken_pdf_generator.py  # ReportLab PDF generator
+│   ├── components.py       # PDF components (headers, footers, etc)
+│   ├── brand_constants.py  # Brand color/font definitions
+│   └── clean_pdf_text.py   # PDF artifact cleaning utility
+├── public/                 # Static assets
+│   ├── logos/              # Sparken brand logos
+│   │   ├── sparken-logo-horizontal.png
+│   │   ├── sparken-logo-horizontal-white.png
+│   │   ├── sparken-logo-horizontal-yellow.png
+│   │   ├── sparken-logo-vertical.png
+│   │   └── [other variations]
+│   └── icons/              # UI icons
+│       ├── file.svg
+│       ├── globe.svg
+│       └── [other icons]
+├── docs/                   # Project documentation
+│   ├── README.md           # Documentation index
+│   ├── QUICK_START.md      # Quick start guide
+│   ├── DEPLOYMENT.md       # Deployment guide
+│   └── [other docs]
+└── tests/                  # Test files and outputs
+    ├── README.md           # Test documentation
+    └── [test files]
 ```
 
 ## Customization
@@ -108,10 +142,18 @@ Design philosophy: If a change increases cognitive load or feels aggressive, rec
 ## Official Brand Assets
 
 Logo files used:
-- `public/sparken-logo-horizontal.png` - Horizontal logo with tagline
-- `public/sparken-logo-vertical.png` - Vertical logo variation
+- `public/logos/sparken-logo-horizontal.png` - Horizontal logo with tagline
+- `public/logos/sparken-logo-vertical.png` - Vertical logo variation
 
 Colors verified from Sparken brandbook 1.pdf
+
+## Documentation
+
+For detailed documentation, see the [docs/](docs/) folder:
+- [Quick Start Guide](docs/QUICK_START.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Brand Implementation Details](docs/BRAND_IMPLEMENTATION.md)
+- [Python System Guide](docs/PYTHON_SYSTEM_GUIDE.md)
 
 ## License
 

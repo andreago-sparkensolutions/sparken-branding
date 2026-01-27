@@ -159,7 +159,7 @@ export async function applySparkEnBranding(
     let verticalLogoImage: PDFImage | null = null;
     
     // Load white horizontal logo for header
-    const horizontalLogoPath = path.join(process.cwd(), 'public', 'sparken-logo-horizontal-white.png');
+    const horizontalLogoPath = path.join(process.cwd(), 'public', 'logos', 'sparken-logo-horizontal-white.png');
     try {
       if (fs.existsSync(horizontalLogoPath)) {
         const logoBytes = fs.readFileSync(horizontalLogoPath);
@@ -174,7 +174,7 @@ export async function applySparkEnBranding(
     }
     
     // Load vertical logo for watermark pattern
-    const verticalLogoPath = path.join(process.cwd(), 'public', 'sparken-logo-vertical.png');
+    const verticalLogoPath = path.join(process.cwd(), 'public', 'logos', 'sparken-logo-vertical.png');
     try {
       console.log('Loading vertical logo from:', verticalLogoPath);
       if (fs.existsSync(verticalLogoPath)) {
