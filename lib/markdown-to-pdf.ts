@@ -37,20 +37,22 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
   let cleaned = markdown
     // Remove HTML comments
     .replace(/<!--[\s\S]*?-->/g, '')
+    // Remove table of contents sections (everything before the first real heading)
+    // TOC typically has links like [Text	PageNumber](#anchor)
+    .replace(/^[\s\S]*?(?=^#{1,3}\s+\*\*[^*]+\*\*\s*\{#)/m, '')
     // Remove custom anchors {#id}
     .replace(/\{#[^}]+\}/g, '')
     // Remove page break markers like "-- 1 of 15 --"
     .replace(/^--\s+\d+\s+of\s+\d+\s+--$/gm, '')
-    // Convert tabs to spaces first (they break both markdown parsing and WinAnsi encoding)
+    // Remove horizontal rules (they just add visual breaks we don't need)
+    .replace(/^---+$/gm, '')
+    .replace(/^___+$/gm, '')
+    .replace(/^\*\*\*+$/gm, '')
+    // Convert tabs to spaces (they break both markdown parsing and WinAnsi encoding)
     .replace(/\t/g, ' ')
-    // Fix broken markdown links split across lines or with extra whitespace
-    // This handles: **[text\n1](link)** or **[text   1](link)**
-    .replace(/\[([^\]]+)\s+([^\]]*)\]\(([^)]+)\)/g, '[$1 $2]($3)')
-    // Clean up multiple spaces within brackets
-    .replace(/\[\s+/g, '[')
-    .replace(/\s+\]/g, ']')
     // Clean up multiple blank lines
-    .replace(/\n\n\n+/g, '\n\n');
+    .replace(/\n\n\n+/g, '\n\n')
+    .trim();
   
   // #region agent log
   fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:54',message:'After cleanup',data:{cleanedLength:cleaned.length,firstChars:cleaned.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
