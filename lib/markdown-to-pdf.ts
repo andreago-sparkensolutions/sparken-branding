@@ -117,6 +117,7 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
   const fontSize = 11;
   const lineHeight = fontSize * 1.6;
   const maxWidth = pageWidth - (margin * 2);
+  const minSpaceForHeaderContent = lineHeight * 3; // Need at least 3 lines after header
   
   let page = pdfDoc.addPage([pageWidth, pageHeight]);
   let yPosition = pageHeight - margin - 80; // Leave space for header/logo
@@ -153,6 +154,13 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
         yPosition -= lineHeight * 0.3;
       } else {
         currentFontSize = 12;
+      }
+      
+      // Check if header would be orphaned at bottom of page
+      // If there's not enough space for header + some content, start new page
+      if (yPosition < margin + 50 + minSpaceForHeaderContent) {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        yPosition = pageHeight - margin - 80;
       }
     }
     
