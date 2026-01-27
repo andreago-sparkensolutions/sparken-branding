@@ -51,42 +51,63 @@ export class EnhancedMarkdownPDF {
   
   private parseInlineBold(text: string): TextSegment[] {
     const segments: TextSegment[] = [];
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
     
-    for (const part of parts) {
-      if (!part) continue;
+    try {
+      const parts = text.split(/(\*\*[^*]+\*\*)/g);
       
-      if (part.startsWith('**') && part.endsWith('**')) {
-        // Bold text
-        segments.push({
-          text: part.slice(2, -2),
-          bold: true
-        });
-      } else {
-        // Regular text
-        segments.push({
-          text: part,
-          bold: false
-        });
+      for (const part of parts) {
+        if (!part) continue;
+        
+        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+          // Bold text
+          segments.push({
+            text: part.slice(2, -2),
+            bold: true
+          });
+        } else {
+          // Regular text
+          segments.push({
+            text: part,
+            bold: false
+          });
+        }
       }
+    } catch (error) {
+      // Fallback: return text as-is if parsing fails
+      segments.push({ text, bold: false });
     }
     
-    return segments;
+    return segments.length > 0 ? segments : [{ text, bold: false }];
   }
   
   private drawTextWithBold(segments: TextSegment[], x: number, y: number, color = TEXT_BLACK) {
     let currentX = x;
     
-    for (const segment of segments) {
-      const font = segment.bold ? this.boldFont : this.font;
-      this.page.drawText(segment.text, {
-        x: currentX,
+    try {
+      for (const segment of segments) {
+        if (!segment || !segment.text) continue;
+        
+        const font = segment.bold ? this.boldFont : this.font;
+        this.page.drawText(segment.text, {
+          x: currentX,
+          y,
+          size: this.fontSize,
+          font,
+          color
+        });
+        currentX += font.widthOfTextAtSize(segment.text, this.fontSize);
+      }
+    } catch (error) {
+      console.error('Error drawing text with bold:', error);
+      // Fallback: draw without formatting
+      const allText = segments.map(s => s.text).join('');
+      this.page.drawText(allText, {
+        x,
         y,
         size: this.fontSize,
-        font,
+        font: this.font,
         color
       });
-      currentX += font.widthOfTextAtSize(segment.text, this.fontSize);
     }
   }
   
@@ -291,8 +312,13 @@ export class EnhancedMarkdownPDF {
 }
 
 export async function convertMarkdownToPdfEnhanced(markdown: string): Promise<Uint8Array> {
-  const generator = new EnhancedMarkdownPDF();
-  await generator.initialize();
-  generator.addMarkdownContent(markdown);
-  return await generator.save();
+  try {
+    const generator = new EnhancedMarkdownPDF();
+    await generator.initialize();
+    generator.addMarkdownContent(markdown);
+    return await generator.save();
+  } catch (error) {
+    console.error('Enhanced markdown PDF generation failed:', error);
+    throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
