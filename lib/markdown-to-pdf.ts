@@ -11,6 +11,7 @@ const TEXT_BLACK = rgb(0.012, 0.016, 0.012);             // #030403
 function sanitizeForWinAnsi(text: string): string {
   return text
     .replace(/[^\x00-\xFF]/g, '') // Remove non-Latin characters
+    .replace(/\t/g, '    ')       // Replace tabs with 4 spaces
     .replace(/→/g, '->')          // Replace arrows
     .replace(/←/g, '<-')
     .replace(/↑/g, '^')
