@@ -6,6 +6,19 @@ import { generatePythonPDF, checkPythonAvailability } from '@/lib/python-bridge'
 // Force Node.js runtime for fs access
 export const runtime = 'nodejs';
 
+// Helper function to sanitize text for WinAnsi encoding
+function sanitizeText(text: string): string {
+  return text
+    .replace(/\t/g, '    ')       // Replace tabs with 4 spaces
+    .replace(/[^\x00-\xFF]/g, '') // Remove non-Latin characters
+    .replace(/"/g, '"')           // Replace smart quotes
+    .replace(/"/g, '"')
+    .replace(/'/g, "'")
+    .replace(/'/g, "'")
+    .replace(/—/g, '-')           // Replace em dash
+    .replace(/–/g, '-');          // Replace en dash
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('=== Branding API called ===');
@@ -88,8 +101,8 @@ export async function POST(request: NextRequest) {
         // Extract title from markdown
         const titleMatch = markdownText.match(/^#\s+(.+)$/m);
         const subtitleMatch = markdownText.match(/^##\s+(.+)$/m);
-        const title = titleMatch ? titleMatch[1].trim() : 'Document';
-        const subtitle = subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions';
+        const title = sanitizeText(titleMatch ? titleMatch[1].trim() : 'Document');
+        const subtitle = sanitizeText(subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions');
         
         console.log('Extracted title:', title, 'subtitle:', subtitle);
         console.log('About to call convertMarkdownToPdf');
@@ -121,11 +134,13 @@ export async function POST(request: NextRequest) {
         brandedPdfBytes = pdfBytes;
       } else {
         // Extract title from filename (remove extension, download numbers, and clean up)
-        const titleFromFilename = file.name
-          .replace(/\.pdf$/i, '')
-          .replace(/\s*\(\d+\)$/, '') // Remove " (3)", " (2)", etc. from duplicate downloads
-          .replace(/[-_]/g, ' ')
-          .replace(/\b\w/g, (char) => char.toUpperCase());
+        const titleFromFilename = sanitizeText(
+          file.name
+            .replace(/\.pdf$/i, '')
+            .replace(/\s*\(\d+\)$/, '') // Remove " (3)", " (2)", etc. from duplicate downloads
+            .replace(/[-_]/g, ' ')
+            .replace(/\b\w/g, (char) => char.toUpperCase())
+        );
         
         // Apply Sparken branding overlay with cover page
         console.log('Applying Sparken branding overlay with cover page...');
