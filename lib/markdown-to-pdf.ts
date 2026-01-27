@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { marked } from 'marked';
 
 // Sparken Brand Colors
 const DEEP_COGNITIVE_PURPLE = rgb(0.369, 0.333, 0.573);  // #5E5592
@@ -26,16 +27,90 @@ function sanitizeForWinAnsi(text: string): string {
     .replace(/–/g, '-');          // Replace en dash
 }
 
+// Function to parse markdown and convert to plain text
+function markdownToPlainText(markdown: string): string[] {
+  // First, clean up common markdown artifacts that marked doesn't handle
+  let cleaned = markdown
+    // Remove HTML comments
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Remove custom anchors {#id}
+    .replace(/\{#[^}]+\}/g, '')
+    // Remove horizontal rules
+    .replace(/^---+$/gm, '\n')
+    .replace(/^___+$/gm, '\n')
+    .replace(/^\*\*\*+$/gm, '\n')
+    // Remove page break markers like "-- 1 of 17 --"
+    .replace(/^--\s+\d+\s+of\s+\d+\s+--$/gm, '')
+    // Remove escaped characters
+    .replace(/\\([*_~`\-\\#\[\]])/g, '$1')
+    // Clean up HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    // Clean up multiple blank lines
+    .replace(/\n\n\n+/g, '\n\n');
+  
+  // Use marked to convert markdown to HTML
+  const html = marked(cleaned, { breaks: true, gfm: true });
+  
+  // Strip HTML tags and convert to plain text
+  let plainText = html
+    // Convert headers
+    .replace(/<h([1-6])>(.*?)<\/h\1>/g, (_, level, text) => {
+      return '\n' + '#'.repeat(parseInt(level)) + ' ' + text + '\n';
+    })
+    // Convert paragraphs
+    .replace(/<p>(.*?)<\/p>/g, '$1\n')
+    // Convert lists
+    .replace(/<li>(.*?)<\/li>/g, '• $1\n')
+    .replace(/<\/ul>/g, '\n')
+    .replace(/<\/ol>/g, '\n')
+    .replace(/<ul>/g, '')
+    .replace(/<ol>/g, '')
+    // Convert line breaks
+    .replace(/<br\s*\/?>/g, '\n')
+    // Convert tables (basic)
+    .replace(/<table>(.*?)<\/table>/gs, (match) => {
+      // Simple table to text conversion
+      return match
+        .replace(/<\/?table>/g, '')
+        .replace(/<\/?thead>/g, '')
+        .replace(/<\/?tbody>/g, '')
+        .replace(/<\/?tr>/g, '\n')
+        .replace(/<\/?th>/g, ' | ')
+        .replace(/<\/?td>/g, ' | ');
+    })
+    // Remove all remaining HTML tags
+    .replace(/<[^>]+>/g, '')
+    // Decode HTML entities again after stripping tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    // Clean up multiple spaces
+    .replace(/  +/g, ' ')
+    // Clean up multiple newlines
+    .replace(/\n\n\n+/g, '\n\n');
+  
+  // Split into lines and sanitize
+  return plainText
+    .split('\n')
+    .map(line => sanitizeForWinAnsi(line.trim()))
+    .filter(line => line.length > 0);
+}
+
 export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8Array> {
   // Create a new PDF document
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   
-  // Sanitize text to remove characters WinAnsi can't encode
-  markdownText = sanitizeForWinAnsi(markdownText);
+  // Parse markdown to clean lines
+  const lines = markdownToPlainText(markdownText);
   
-  const lines = markdownText.split('\n');
   const pageWidth = 612;  // 8.5 inches
   const pageHeight = 792; // 11 inches
   const margin = 72;      // 1 inch margins
@@ -46,154 +121,7 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
   let page = pdfDoc.addPage([pageWidth, pageHeight]);
   let yPosition = pageHeight - margin - 80; // Leave space for header/logo
   
-  // Helper function to detect if we're in a table
-  const isTableLine = (line: string) => line.trim().startsWith('|');
-  const isTableSeparator = (line: string) => /^\|[\s:-]+\|/.test(line.trim());
-  
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    
-    // Check if this is the start of a table
-    if (isTableLine(line) && i + 1 < lines.length) {
-      // Collect all table rows
-      const tableRows: string[][] = [];
-      let hasHeader = false;
-      
-      while (i < lines.length && isTableLine(lines[i])) {
-        const currentLine = lines[i].trim();
-        
-        // Skip separator rows but note if we've seen one (indicates header)
-        if (isTableSeparator(currentLine)) {
-          hasHeader = tableRows.length > 0;
-          i++;
-          continue;
-        }
-        
-        // Parse row and clean markdown from cells
-        const cells = currentLine
-          .split('|')
-          .slice(1, -1) // Remove empty first/last elements
-          .map(cell => {
-            let cleanCell = cell.trim();
-            // Remove markdown formatting
-            cleanCell = cleanCell.replace(/\*\*(.+?)\*\*/g, '$1'); // Remove bold
-            cleanCell = cleanCell.replace(/\*(.+?)\*/g, '$1');     // Remove italic
-            cleanCell = cleanCell.replace(/`(.+?)`/g, '$1');       // Remove code
-            return cleanCell;
-          });
-        
-        if (cells.length > 0 && cells.some(cell => cell.length > 0)) {
-          tableRows.push(cells);
-        }
-        i++;
-      }
-      
-      // Draw the table
-      if (tableRows.length > 0) {
-        const numCols = tableRows[0].length;
-        const colWidth = maxWidth / numCols;
-        const rowHeight = lineHeight * 1.5;
-        
-        // Check if table fits on page
-        const tableHeight = tableRows.length * rowHeight;
-        if (yPosition - tableHeight < margin + 50) {
-          page = pdfDoc.addPage([pageWidth, pageHeight]);
-          yPosition = pageHeight - margin - 80;
-        }
-        
-        // Draw table
-        for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
-          const row = tableRows[rowIdx];
-          const isHeader = hasHeader && rowIdx === 0;
-          
-          // Draw row background
-          if (isHeader) {
-            page.drawRectangle({
-              x: margin,
-              y: yPosition - rowHeight + 4,
-              width: maxWidth,
-              height: rowHeight,
-              color: DEEP_COGNITIVE_PURPLE,
-            });
-          } else if (rowIdx % 2 === 1) {
-            page.drawRectangle({
-              x: margin,
-              y: yPosition - rowHeight + 4,
-              width: maxWidth,
-              height: rowHeight,
-              color: SOFT_GRAY,
-            });
-          }
-          
-          // Draw cells
-          for (let colIdx = 0; colIdx < row.length; colIdx++) {
-            const cellText = row[colIdx];
-            const cellX = margin + (colIdx * colWidth) + 8;
-            const cellY = yPosition - (rowHeight / 2) - 2;
-            
-            const cellFont = isHeader ? boldFont : font;
-            const cellColor = isHeader ? rgb(1, 1, 1) : TEXT_BLACK;
-            const cellSize = isHeader ? fontSize : fontSize - 1;
-            
-            // Wrap text if too long
-            const words = cellText.split(' ');
-            let currentLine = '';
-            let lines: string[] = [];
-            
-            for (const word of words) {
-              const testLine = currentLine ? `${currentLine} ${word}` : word;
-              const textWidth = cellFont.widthOfTextAtSize(testLine, cellSize);
-              
-              if (textWidth > colWidth - 16) {
-                if (currentLine) lines.push(currentLine);
-                currentLine = word;
-              } else {
-                currentLine = testLine;
-              }
-            }
-            if (currentLine) lines.push(currentLine);
-            
-            // Draw text (only first line for now to keep simple)
-            if (lines.length > 0) {
-              page.drawText(lines[0], {
-                x: cellX,
-                y: cellY,
-                size: cellSize,
-                font: cellFont,
-                color: cellColor,
-              });
-            }
-          }
-          
-          // Draw row border
-          page.drawLine({
-            start: { x: margin, y: yPosition - rowHeight + 4 },
-            end: { x: margin + maxWidth, y: yPosition - rowHeight + 4 },
-            thickness: 0.5,
-            color: DEEP_COGNITIVE_PURPLE,
-            opacity: 0.3,
-          });
-          
-          yPosition -= rowHeight;
-        }
-        
-        // Add spacing after table
-        yPosition -= lineHeight;
-        
-        // Check if we need a new page
-        if (yPosition < margin + 50) {
-          page = pdfDoc.addPage([pageWidth, pageHeight]);
-          yPosition = pageHeight - margin - 80;
-        }
-      }
-      
-      continue; // Skip to next line after table
-    }
-    
-    // Regular line processing
-    i++; // Increment for non-table lines
-    
+  for (const line of lines) {
     // Skip empty lines but add spacing
     if (!line.trim()) {
       yPosition -= lineHeight * 0.5;
@@ -228,26 +156,10 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
       }
     }
     
-    // Remove bold markers but DON'T make the whole line bold
-    // Only specific words marked with ** should be bold (handled separately)
-    cleanLine = cleanLine.replace(/\*\*(.+?)\*\*/g, '$1');
-    
-    // Check for italic (just remove markers, we don't have italic font)
-    cleanLine = cleanLine.replace(/\*(.+?)\*/g, '$1');
-    
-    // Check for inline code
-    cleanLine = cleanLine.replace(/`(.+?)`/g, '$1');
-    
-    // Check for links [text](url) - just show text
-    cleanLine = cleanLine.replace(/\[(.+?)\]\(.+?\)/g, '$1');
-    
-    // Check for list items - clean markdown from them
-    if (cleanLine.match(/^[-*+]\s+/)) {
-      cleanLine = cleanLine.replace(/^[-*+]\s+/, '  • ');
-      // Remove any remaining markdown formatting from list items
-      cleanLine = cleanLine.replace(/\*\*(.+?)\*\*/g, '$1');
-      cleanLine = cleanLine.replace(/\*(.+?)\*/g, '$1');
-      cleanLine = cleanLine.replace(/`(.+?)`/g, '$1');
+    // Check for list items
+    if (cleanLine.match(/^[•*-]\s+/) || cleanLine.match(/^\d+\.\s+/)) {
+      cleanLine = cleanLine.replace(/^[•*-]\s+/, '  • ');
+      cleanLine = cleanLine.replace(/^\d+\.\s+/, '  • ');
     }
     
     // Word wrap
