@@ -28,7 +28,7 @@ function sanitizeForWinAnsi(text: string): string {
 }
 
 // Function to parse markdown and convert to plain text
-function markdownToPlainText(markdown: string): string[] {
+async function markdownToPlainText(markdown: string): Promise<string[]> {
   // First, clean up common markdown artifacts that marked doesn't handle
   let cleaned = markdown
     // Remove HTML comments
@@ -53,7 +53,7 @@ function markdownToPlainText(markdown: string): string[] {
     .replace(/\n\n\n+/g, '\n\n');
   
   // Use marked to convert markdown to HTML
-  const html = marked(cleaned, { breaks: true, gfm: true });
+  const html = await marked(cleaned, { breaks: true, gfm: true });
   
   // Strip HTML tags and convert to plain text
   let plainText = html
@@ -109,7 +109,7 @@ export async function convertMarkdownToPdf(markdownText: string): Promise<Uint8A
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   
   // Parse markdown to clean lines
-  const lines = markdownToPlainText(markdownText);
+  const lines = await markdownToPlainText(markdownText);
   
   const pageWidth = 612;  // 8.5 inches
   const pageHeight = 792; // 11 inches
