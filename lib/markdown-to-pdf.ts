@@ -29,6 +29,10 @@ function sanitizeForWinAnsi(text: string): string {
 
 // Function to parse markdown and convert to plain text
 async function markdownToPlainText(markdown: string): Promise<string[]> {
+  // #region agent log
+  fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:31',message:'markdownToPlainText input',data:{markdownLength:markdown.length,firstChars:markdown.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+  // #endregion
+  
   // First, clean up common markdown artifacts that marked doesn't handle
   let cleaned = markdown
     // Remove HTML comments
@@ -52,8 +56,16 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
     // Clean up multiple blank lines
     .replace(/\n\n\n+/g, '\n\n');
   
+  // #region agent log
+  fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:54',message:'After cleanup',data:{cleanedLength:cleaned.length,firstChars:cleaned.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
+  
   // Use marked to convert markdown to HTML
   const html = await marked(cleaned, { breaks: true, gfm: true });
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:61',message:'HTML from marked',data:{htmlLength:html.length,firstChars:html.substring(0,1000),sampleTable:html.match(/<table[\s\S]{0,300}/)?.[0]||'no-table'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+  // #endregion
   
   // Strip HTML tags and convert to plain text
   let plainText = html
@@ -94,6 +106,10 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
     .replace(/  +/g, ' ')
     // Clean up multiple newlines
     .replace(/\n\n\n+/g, '\n\n');
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'markdown-to-pdf.ts:110',message:'PlainText after HTML stripping',data:{plainTextLength:plainText.length,firstChars:plainText.substring(0,1000),sampleLines:plainText.split('\n').slice(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,D'})}).catch(()=>{});
+  // #endregion
   
   // Split into lines and sanitize
   return plainText
