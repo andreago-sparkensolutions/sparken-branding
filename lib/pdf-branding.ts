@@ -146,6 +146,9 @@ export async function applySparkEnBranding(
   }
 ): Promise<Uint8Array> {
   try {
+    // #region agent log
+    fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pdf-branding.ts:147',message:'BRANDING_ENTRY',data:{pdfBytesLength:pdfBytes.length,hasOptions:!!options,cwd:process.cwd(),env:process.env.VERCEL?'vercel':'local'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
+    // #endregion
     console.log('Starting PDF branding process...');
     
     // Load the PDF document
@@ -168,17 +171,30 @@ export async function applySparkEnBranding(
       console.log('Current working directory:', process.cwd());
       console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Local');
       
+      // #region agent log
+      fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pdf-branding.ts:175',message:'LOGO_LOAD_ATTEMPT',data:{logoPath:horizontalLogoPath,exists:fs.existsSync(horizontalLogoPath)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
+      // #endregion
+      
       if (fs.existsSync(horizontalLogoPath)) {
         const logoBytes = fs.readFileSync(horizontalLogoPath);
         console.log(`White horizontal logo loaded: ${logoBytes.length} bytes`);
         try {
           horizontalLogoImage = await pdfDoc.embedPng(logoBytes);
           console.log('White horizontal logo embedded successfully');
+          // #region agent log
+          fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pdf-branding.ts:185',message:'LOGO_EMBED_SUCCESS',data:{logoType:'horizontal',bytesLength:logoBytes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
         } catch (error) {
           console.error('Failed to embed white horizontal logo:', error);
+          // #region agent log
+          fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pdf-branding.ts:191',message:'LOGO_EMBED_FAIL',data:{logoType:'horizontal',error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
         }
       } else {
         console.warn('White horizontal logo file not found at:', horizontalLogoPath);
+        // #region agent log
+        fetch('http://127.0.0.1:7248/ingest/f73cb11f-b80b-4ec6-92ef-134f11cd7f6d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pdf-branding.ts:198',message:'LOGO_NOT_FOUND',data:{logoPath:horizontalLogoPath,cwd:process.cwd()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
+        // #endregion
         // Try alternative path for Vercel
         const altPath = path.join(process.cwd(), '.next', 'static', 'media', 'sparken-logo-horizontal-white.png');
         console.log('Trying alternative path:', altPath);
