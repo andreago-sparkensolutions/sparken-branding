@@ -37,6 +37,8 @@ async function markdownToPlainText(markdown: string): Promise<string[]> {
   // FIRST: Clean PDF artifacts (removes page markers, footer text, etc.)
   markdown = cleanPdfArtifacts(markdown);
   
+  console.log('[Markdown-to-PDF] After cleaning, length:', markdown.length);
+  
   // Then, clean up other markdown artifacts
   let cleaned = markdown
     // Remove HTML comments

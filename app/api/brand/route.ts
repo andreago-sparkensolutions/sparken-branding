@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applySparkEnBranding } from '@/lib/pdf-branding';
 import { convertMarkdownToPdf } from '@/lib/markdown-to-pdf';
+import { convertMarkdownToPdfEnhanced } from '@/lib/enhanced-markdown-pdf';
 import { generatePythonPDF, checkPythonAvailability } from '@/lib/python-bridge';
 import { cleanPdfArtifacts } from '@/lib/clean-text';
 
@@ -67,8 +68,8 @@ export async function POST(request: NextRequest) {
           });
           console.log('Python PDF generated, size:', brandedPdfBytes.length);
         } catch (error) {
-          console.error('Python PDF generation failed, falling back to TypeScript:', error);
-          // Fallback to TypeScript converter
+          console.error('Python PDF generation failed, falling back to Enhanced TypeScript:', error);
+          // Fallback to ENHANCED TypeScript converter (with tables and bold)
           let markdownText = await file.text();
           
           // IMPORTANT: Clean PDF artifacts before processing
@@ -80,7 +81,8 @@ export async function POST(request: NextRequest) {
           const title = titleMatch ? titleMatch[1].trim() : 'Document';
           const subtitle = subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions';
           
-          const pdfBytes = await convertMarkdownToPdf(markdownText);
+          // Use enhanced converter with proper formatting
+          const pdfBytes = await convertMarkdownToPdfEnhanced(markdownText);
           brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
             addCoverPage: true,
             title: title,
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
-        // Fallback to TypeScript converter
+        // Fallback to ENHANCED TypeScript converter (with tables and bold)
         let markdownText = await file.text();
         
         // IMPORTANT: Clean PDF artifacts before processing
@@ -100,7 +102,8 @@ export async function POST(request: NextRequest) {
         const title = sanitizeText(titleMatch ? titleMatch[1].trim() : 'Document');
         const subtitle = sanitizeText(subtitleMatch ? subtitleMatch[1].trim() : 'Prepared by Sparken Solutions');
         
-        const pdfBytes = await convertMarkdownToPdf(markdownText);
+        // Use enhanced converter with proper formatting
+        const pdfBytes = await convertMarkdownToPdfEnhanced(markdownText);
         brandedPdfBytes = await applySparkEnBranding(pdfBytes, {
           addCoverPage: true,
           title: title,

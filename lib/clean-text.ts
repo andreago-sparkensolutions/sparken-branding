@@ -57,14 +57,15 @@ export function cleanPdfArtifacts(text: string): string {
       }
     }
     
-    // Remove whole-line bold markers
+    // KEEP inline bold markers for markdown processing
+    // Only remove whole-line bold if it's likely a subtitle
     if (/^\*\*(.+)\*\*$/.test(cleanedLine)) {
       const inner = cleanedLine.match(/^\*\*(.+)\*\*$/)?.[1];
-      if (inner && !foundFirstHeading && inner.length < 100) {
-        cleanedLine = inner;
-      } else if (inner && !/^##?\s+/.test(cleanedLine)) {
+      if (inner && !foundFirstHeading && inner.length < 100 && inner.length > 0) {
+        // This is likely a subtitle, keep it but without bold markers
         cleanedLine = inner;
       }
+      // Otherwise keep the bold markers for proper markdown processing
     }
     
     if (cleanedLine) {
