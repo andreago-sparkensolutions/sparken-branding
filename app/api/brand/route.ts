@@ -160,10 +160,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Return the branded PDF
+    // Sanitize filename for HTTP header (remove non-ASCII characters)
+    const safeFilename = file.name
+      .replace(/\.(md|docx?)$/i, '')
+      .normalize('NFD')                    // Decompose combined characters
+      .replace(/[\u0300-\u036f]/g, '')     // Remove diacritics
+      .replace(/[^\x00-\x7F]/g, '')        // Remove non-ASCII
+      .replace(/[^a-zA-Z0-9-_. ]/g, '-')   // Replace special chars with dash
+      .trim();
+    
     return new NextResponse(Buffer.from(brandedPdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="sparken-branded-${file.name.replace(/\.(md|docx?)$/i, '')}.pdf"`,
+        'Content-Disposition': `attachment; filename="sparken-branded-${safeFilename}.pdf"`,
       },
     });
   } catch (error) {
