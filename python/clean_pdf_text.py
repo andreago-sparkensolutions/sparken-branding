@@ -77,17 +77,18 @@ def clean_pdf_artifacts(text):
                 found_first_heading = True
                 continue
         
-        # Remove bold/italic markdown that's leftover from PDF
-        # But only if it's wrapping an entire line (not inline emphasis)
-        if re.match(r'^\*\*(.+)\*\*$', cleaned):
-            # If we haven't found a heading yet, this might be a subtitle
-            inner_text = re.match(r'^\*\*(.+)\*\*$', cleaned).group(1)
-            if not found_first_heading and len(inner_text) < 100:
-                # Likely a title or subtitle, keep but remove bold
-                cleaned = inner_text
-            # Otherwise just remove the bold markers
-            elif not re.match(r'^##?\s+', cleaned):  # Unless it's already a heading
-                cleaned = inner_text
+        # Remove ALL markdown bold/italic markers (both inline and full-line)
+        # These should not appear in final PDF output
+        cleaned = re.sub(r'\*\*(.+?)\*\*', r'\1', cleaned)  # Remove bold
+        cleaned = re.sub(r'\*(.+?)\*', r'\1', cleaned)  # Remove italic
+        cleaned = re.sub(r'`(.+?)`', r'\1', cleaned)  # Remove code markers
+        
+        # Remove bullet point artifacts like "•" followed by "--"
+        cleaned = re.sub(r'^[•\-]\s*--\s*$', '', cleaned)
+        
+        # Remove standalone bullet points or dashes at start of line if they're alone
+        if re.match(r'^[•\-]\s*$', cleaned):
+            cleaned = ''
         
         # Remove excessive whitespace but preserve paragraph breaks
         if cleaned:

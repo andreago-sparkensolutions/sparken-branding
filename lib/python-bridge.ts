@@ -9,6 +9,7 @@ export interface PythonPDFOptions {
   title?: string;
   subtitle?: string;
   theme?: 'formal' | 'creative';
+  includeToc?: boolean;  // Whether to include table of contents (default: true)
 }
 
 /**
@@ -84,7 +85,8 @@ export async function generatePythonPDF(
     const metadata = JSON.stringify({
       title: options.title,
       subtitle: options.subtitle,
-      theme: options.theme || 'formal'
+      theme: options.theme || 'formal',
+      includeToc: options.includeToc !== undefined ? options.includeToc : true
     });
     
     // Spawn Python process

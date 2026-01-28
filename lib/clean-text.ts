@@ -19,6 +19,16 @@ export function cleanPdfArtifacts(text: string): string {
       continue;
     }
     
+    // Skip bullet point artifacts like "• --"
+    if (/^[•\-]\s*--\s*$/.test(line)) {
+      continue;
+    }
+    
+    // Skip standalone bullets or dashes
+    if (/^[•\-]\s*$/.test(line)) {
+      continue;
+    }
+    
     // Skip footer lines like "Page X of Y Sparken"
     if (/^Page\s+\d+\s+of\s+\d+\s+\w+\s*$/.test(line)) {
       continue;
@@ -41,6 +51,11 @@ export function cleanPdfArtifacts(text: string): string {
     cleanedLine = cleanedLine.replace(/&amp;/g, '&');
     cleanedLine = cleanedLine.replace(/&nbsp;/g, ' ');
     
+    // Remove ALL markdown formatting - these should not appear in final PDF
+    cleanedLine = cleanedLine.replace(/\*\*(.+?)\*\*/g, '$1');  // Remove bold
+    cleanedLine = cleanedLine.replace(/\*(.+?)\*/g, '$1');  // Remove italic
+    cleanedLine = cleanedLine.replace(/`(.+?)`/g, '$1');  // Remove code markers
+    
     // Remove trailing single digits
     cleanedLine = cleanedLine.replace(/\s+\d+\s*$/, '');
     
@@ -57,15 +72,13 @@ export function cleanPdfArtifacts(text: string): string {
       }
     }
     
-    // KEEP inline bold markers for markdown processing
-    // Only remove whole-line bold if it's likely a subtitle
-    if (/^\*\*(.+)\*\*$/.test(cleanedLine)) {
-      const inner = cleanedLine.match(/^\*\*(.+)\*\*$/)?.[1];
-      if (inner && !foundFirstHeading && inner.length < 100 && inner.length > 0) {
-        // This is likely a subtitle, keep it but without bold markers
-        cleanedLine = inner;
+    // Don't keep bold markers - they should be removed entirely
+    // Skip empty lines after cleaning
+    if (!cleanedLine.trim()) {
+      if (cleaned.length > 0 && cleaned[cleaned.length - 1] !== '') {
+        cleaned.push('');
       }
-      // Otherwise keep the bold markers for proper markdown processing
+      continue;
     }
     
     if (cleanedLine) {

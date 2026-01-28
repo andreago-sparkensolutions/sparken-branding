@@ -28,6 +28,11 @@ class BrandColors:
     # Opacity/Alpha variations
     PURPLE_LIGHT = colors.Color(94/255, 85/255, 146/255, alpha=0.1)
     YELLOW_LIGHT = colors.Color(248/255, 216/255, 48/255, alpha=0.2)
+    
+    # Hex values (for HTML/XML formatting in PDFs)
+    DEEP_COGNITIVE_PURPLE_HEX = "5E5592"
+    BEHAVIORAL_YELLOW_HEX = "F8D830"
+    TEXT_BLACK_HEX = "030403"
 
 # ============================================================================
 # TYPOGRAPHY - Font Definitions

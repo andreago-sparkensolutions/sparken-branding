@@ -49,35 +49,39 @@ export class EnhancedMarkdownPDF {
     }
   }
   
-  private parseInlineBold(text: string): TextSegment[] {
-    const segments: TextSegment[] = [];
+  private checkHeadingPageBreak(headingSize: number) {
+    // Headings need space for:
+    // 1. The heading itself (headingSize * 2)
+    // 2. At least 2-3 lines of content after (lineHeight * 3)
+    // This prevents widows/orphans where heading is at bottom of page
+    const requiredSpace = (headingSize * 2) + (this.lineHeight * 3);
     
-    try {
-      const parts = text.split(/(\*\*[^*]+\*\*)/g);
-      
-      for (const part of parts) {
-        if (!part) continue;
-        
-        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-          // Bold text
-          segments.push({
-            text: part.slice(2, -2),
-            bold: true
-          });
-        } else {
-          // Regular text
-          segments.push({
-            text: part,
-            bold: false
-          });
-        }
-      }
-    } catch (error) {
-      // Fallback: return text as-is if parsing fails
-      segments.push({ text, bold: false });
+    if (this.yPosition < this.margin + requiredSpace) {
+      this.addPage();
     }
+  }
+  
+  private preventWidow() {
+    // Prevent widows: ensure at least 2 lines of space remain
+    // If less than 2 lines worth of space, move to next page
+    const minLines = 2;
+    const requiredSpace = this.lineHeight * minLines;
     
-    return segments.length > 0 ? segments : [{ text, bold: false }];
+    if (this.yPosition < this.margin + requiredSpace) {
+      this.addPage();
+    }
+  }
+  
+  private parseInlineBold(text: string): TextSegment[] {
+    // UPDATED: Don't parse bold markers - clean-text.ts should have already removed them
+    // Just return the text as a single segment
+    // If any ** markers remain, remove them here as a safety measure
+    const cleanedText = text
+      .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove ** bold markers
+      .replace(/\*(.+?)\*/g, '$1')      // Remove * italic markers
+      .replace(/`(.+?)`/g, '$1');       // Remove ` code markers
+    
+    return [{ text: cleanedText, bold: false }];
   }
   
   private drawTextWithBold(segments: TextSegment[], x: number, y: number, color = TEXT_BLACK) {
@@ -87,20 +91,23 @@ export class EnhancedMarkdownPDF {
       for (const segment of segments) {
         if (!segment || !segment.text) continue;
         
+        // CRITICAL: Replace tabs with spaces to avoid WinAnsi encoding error
+        const sanitizedText = segment.text.replace(/\t/g, '    ');
+        
         const font = segment.bold ? this.boldFont : this.font;
-        this.page.drawText(segment.text, {
+        this.page.drawText(sanitizedText, {
           x: currentX,
           y,
           size: this.fontSize,
           font,
           color
         });
-        currentX += font.widthOfTextAtSize(segment.text, this.fontSize);
+        currentX += font.widthOfTextAtSize(sanitizedText, this.fontSize);
       }
     } catch (error) {
       console.error('Error drawing text with bold:', error);
       // Fallback: draw without formatting
-      const allText = segments.map(s => s.text).join('');
+      const allText = segments.map(s => s.text.replace(/\t/g, '    ')).join('');
       this.page.drawText(allText, {
         x,
         y,
@@ -150,7 +157,14 @@ export class EnhancedMarkdownPDF {
       // Draw cells
       let currentX = this.margin;
       for (let j = 0; j < row.length; j++) {
-        const cellText = row[j] || '';
+        // Clean markdown markers from table cells
+        let cellText = (row[j] || '')
+          .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove bold markers
+          .replace(/\*(.+?)\*/g, '$1')      // Remove italic markers
+          .replace(/`(.+?)`/g, '$1')        // Remove code markers
+          .replace(/\[([^\]]+?)\]\([^\)]+?\)/g, '$1')  // Remove links
+          .replace(/\t/g, '    ');          // Sanitize tabs
+        
         const font = isHeader ? this.boldFont : this.font;
         const color = isHeader ? WHITE : TEXT_BLACK;
         
@@ -198,13 +212,27 @@ export class EnhancedMarkdownPDF {
   }
   
   addMarkdownContent(markdown: string) {
+    // CRITICAL: Remove tab characters that cause WinAnsi encoding errors
+    markdown = markdown.replace(/\t/g, '    '); // Replace tabs with 4 spaces
+    
     const lines = markdown.split('\n');
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
+      // Skip empty lines
       if (!line) {
         this.yPosition -= this.lineHeight * 0.5;
+        continue;
+      }
+      
+      // Skip bullet point artifacts like "• --"
+      if (/^[•\-]\s*--\s*$/.test(line)) {
+        continue;
+      }
+      
+      // Skip standalone bullets or dashes
+      if (/^[•\-]\s*$/.test(line)) {
         continue;
       }
       
@@ -212,10 +240,11 @@ export class EnhancedMarkdownPDF {
       const headerMatch = line.match(/^(#{1,3})\s+(.+)$/);
       if (headerMatch) {
         const level = headerMatch[1].length;
-        const text = headerMatch[2];
+        const text = headerMatch[2].replace(/\t/g, '    '); // Sanitize tabs
         const fontSize = level === 1 ? 20 : level === 2 ? 16 : 14;
         
-        this.checkPageBreak(fontSize * 2);
+        // PREVENT WIDOW: Ensure heading has space for content after it
+        this.checkHeadingPageBreak(fontSize);
         this.yPosition -= this.lineHeight;
         
         this.page.drawText(text, {
@@ -252,8 +281,8 @@ export class EnhancedMarkdownPDF {
       
       // Check for bullets
       if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
-        this.checkPageBreak();
-        const text = line.replace(/^[•\-\*]\s*/, '');
+        this.preventWidow(); // Prevent orphaning bullets at bottom of page
+        const text = line.replace(/^[•\-\*]\s*/, '').replace(/\t/g, '    '); // Sanitize tabs
         const segments = this.parseInlineBold(text);
         
         this.page.drawText('  •', {
@@ -270,7 +299,7 @@ export class EnhancedMarkdownPDF {
       }
       
       // Regular paragraph with bold support
-      this.checkPageBreak();
+      this.preventWidow(); // Prevent orphaning paragraphs
       const segments = this.parseInlineBold(line);
       
       // Word wrap
@@ -288,7 +317,7 @@ export class EnhancedMarkdownPDF {
             // Draw current line
             this.drawTextWithBold(currentLine, this.margin, this.yPosition);
             this.yPosition -= this.lineHeight;
-            this.checkPageBreak();
+            this.preventWidow(); // Check for widow after each wrapped line
             currentLine = [];
             currentWidth = 0;
           }

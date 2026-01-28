@@ -11,10 +11,12 @@ import json
 from io import BytesIO
 
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, KeepTogether
+from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, PageBreak, 
+                                KeepTogether, Table, TableStyle)
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas as pdf_canvas
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_JUSTIFY
 
 from brand_constants import BrandColors, Typography, Layout
 from components import (
@@ -26,17 +28,20 @@ from components import (
 class SparkEnPDFGenerator:
     """Main PDF generator class"""
     
-    def __init__(self, output_path=None):
+    def __init__(self, output_path=None, include_toc=True):
         """
         Initialize PDF generator
         
         Args:
             output_path: Path to save PDF (or None for BytesIO)
+            include_toc: Whether to include a table of contents (default: True)
         """
         self.output_path = output_path or BytesIO()
         self.story = []
         self.metadata = {}
         self.has_cover = False
+        self.include_toc = include_toc
+        self.toc_entries = []  # Track heading entries for TOC
         
     def parse_markdown(self, markdown_text):
         """
@@ -96,16 +101,20 @@ class SparkEnPDFGenerator:
                         
                         # Skip separator rows (lines with only dashes, colons, pipes)
                         if row and not all(re.match(r'^[-:\s]+$', cell) for cell in row):
-                            # Clean markdown formatting from cells
+                            # Clean ALL markdown formatting from cells
                             cleaned_row = []
                             for cell in row:
                                 if cell:  # Skip empty cells
-                                    # Remove bold markers
+                                    # Remove bold markers (both ** and __)
                                     cell = re.sub(r'\*\*(.+?)\*\*', r'\1', cell)
-                                    # Remove italic markers
+                                    cell = re.sub(r'__(.+?)__', r'\1', cell)
+                                    # Remove italic markers (both * and _)
                                     cell = re.sub(r'\*(.+?)\*', r'\1', cell)
+                                    cell = re.sub(r'_(.+?)_', r'\1', cell)
                                     # Remove inline code markers
                                     cell = re.sub(r'`(.+?)`', r'\1', cell)
+                                    # Remove links [text](url)
+                                    cell = re.sub(r'\[([^\]]+?)\]\([^\)]+?\)', r'\1', cell)
                                     cleaned_row.append(cell)
                             if cleaned_row:  # Only add if row has content
                                 table_rows.append(cleaned_row)
@@ -133,10 +142,22 @@ class SparkEnPDFGenerator:
             
             # Regular paragraphs
             else:
+                # Skip lines that are just bullets with dashes like "• --"
+                if re.match(r'^[•\-]\s*--\s*$', line):
+                    i += 1
+                    continue
+                
                 # Clean markdown formatting from paragraphs
-                cleaned_line = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', line)  # Convert bold to HTML
-                cleaned_line = re.sub(r'\*(.+?)\*', r'<i>\1</i>', cleaned_line)  # Convert italic to HTML
+                # Remove ALL markdown markers - they should not appear in PDF
+                cleaned_line = re.sub(r'\*\*(.+?)\*\*', r'\1', line)  # Remove bold markers
+                cleaned_line = re.sub(r'\*(.+?)\*', r'\1', cleaned_line)  # Remove italic markers
                 cleaned_line = re.sub(r'`(.+?)`', r'\1', cleaned_line)  # Remove code markers
+                
+                # Skip if line became empty after cleaning
+                if not cleaned_line.strip():
+                    i += 1
+                    continue
+                    
                 content.append(('body', cleaned_line))
             
             i += 1
@@ -162,6 +183,96 @@ class SparkEnPDFGenerator:
             'theme': theme
         }
     
+    def _create_simple_toc(self):
+        """Create a simple table of contents using a table layout"""
+        if not self.toc_entries:
+            return []
+        
+        toc_elements = []
+        
+        # Add TOC title
+        toc_title_style = ParagraphStyle(
+            'TOCTitle',
+            fontName=Typography.DISPLAY_FONT,
+            fontSize=Typography.H1_SIZE,
+            textColor=BrandColors.BRAND_PURPLE,
+            leading=Typography.H1_SIZE * Typography.H1_LEADING,
+            spaceAfter=Layout.PARAGRAPH_SPACING
+        )
+        toc_title = Paragraph('<b>TABLE OF CONTENTS</b>', toc_title_style)
+        toc_elements.append(toc_title)
+        toc_elements.append(Spacer(1, 0.3 * inch))
+        
+        # Create TOC entries as table for better alignment
+        toc_data = []
+        page_counter = 2 if self.has_cover else 1  # Start after cover
+        page_counter += 1  # TOC itself takes a page
+        
+        for level, text, _ in self.toc_entries:
+            # Define style based on level
+            if level == 0:  # H1
+                style = ParagraphStyle(
+                    'TOC_H1_text',
+                    fontName=Typography.DISPLAY_FONT,
+                    fontSize=12,
+                    textColor=BrandColors.BRAND_PURPLE,
+                    leading=15
+                )
+                display_text = text.upper()
+                indent = ""
+            elif level == 1:  # H2
+                style = ParagraphStyle(
+                    'TOC_H2_text',
+                    fontName=Typography.BODY_FONT,
+                    fontSize=11,
+                    textColor=BrandColors.TEXT_BLACK,
+                    leading=14
+                )
+                display_text = text
+                indent = "&nbsp;&nbsp;&nbsp;"
+            else:  # H3
+                style = ParagraphStyle(
+                    'TOC_H3_text',
+                    fontName=Typography.BODY_FONT,
+                    fontSize=10,
+                    textColor=BrandColors.TEXT_BLACK,
+                    leading=13
+                )
+                display_text = text
+                indent = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+            
+            # Create table row with heading and page number
+            heading_para = Paragraph(f'{indent}{display_text}', style)
+            page_style = ParagraphStyle(
+                f'TOC_page_{level}',
+                fontName=Typography.BODY_FONT if level > 0 else Typography.DISPLAY_FONT,
+                fontSize=11 if level ==1 else (10 if level == 2 else 12),
+                textColor=BrandColors.BRAND_PURPLE if level == 0 else BrandColors.TEXT_BLACK,
+                alignment=TA_RIGHT
+            )
+            page_para = Paragraph(f'<b>{page_counter}</b>', page_style)
+            
+            toc_data.append([heading_para, page_para])
+            
+            # Increment page counter (rough estimate)
+            # In practice, you'd track actual pages during generation
+            page_counter += 1
+        
+        # Create table with two columns
+        toc_table = Table(toc_data, colWidths=[Layout.CONTENT_WIDTH - 50, 50])
+        toc_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        
+        toc_elements.append(toc_table)
+        toc_elements.append(PageBreak())
+        
+        return toc_elements
+    
     def add_content_from_markdown(self, markdown_text):
         """
         Parse markdown and add all content to story
@@ -184,18 +295,28 @@ class SparkEnPDFGenerator:
                     self.cover_data['subtitle'] = self.metadata['subtitle']
         
         # Convert parsed content to PDF components
+        # If TOC is enabled, track headings for later
         for content_type, content_data in parsed:
             if content_type == 'h1':
                 self.story.append(HeadingComponent.create_h1(content_data))
                 self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 2))
+                # Track for TOC (page number will be calculated later)
+                if self.include_toc:
+                    self.toc_entries.append((0, content_data, None))
             
             elif content_type == 'h2':
                 self.story.append(HeadingComponent.create_h2(content_data))
                 self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 2))
+                # Track for TOC
+                if self.include_toc:
+                    self.toc_entries.append((1, content_data, None))
             
             elif content_type == 'h3':
                 self.story.append(HeadingComponent.create_h3(content_data))
                 self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 4))
+                # Track for TOC
+                if self.include_toc:
+                    self.toc_entries.append((2, content_data, None))
             
             elif content_type == 'body':
                 self.story.append(BodyTextComponent.create(content_data))
@@ -269,6 +390,11 @@ class SparkEnPDFGenerator:
         Returns:
             PDF bytes (if output_path is BytesIO) or None (if writing to file)
         """
+        # Insert TOC at the beginning of story if enabled
+        if self.include_toc and self.toc_entries:
+            toc_elements = self._create_simple_toc()
+            self.story = toc_elements + self.story
+        
         # Create document
         doc = SimpleDocTemplate(
             self.output_path,
@@ -326,7 +452,8 @@ def main():
     
     # Generate PDF
     output = BytesIO()
-    generator = SparkEnPDFGenerator(output)
+    include_toc = metadata.get('includeToc', True)  # Default to True
+    generator = SparkEnPDFGenerator(output, include_toc=include_toc)
     
     # Add cover page if metadata provided
     if metadata.get('title'):

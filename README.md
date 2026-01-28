@@ -23,6 +23,7 @@ All brand assets verified against official Sparken brandbook.
 - 🧠 **Cognitive Flow**: Reduces friction at every step
 - 🏢 **Official Logo**: Uses authentic Sparken four-pointed star logo
 - 🔧 **Auto-Cleanup**: Automatically removes PDF conversion artifacts for clean output
+- 📑 **Table of Contents**: Automatically generates TOC with page numbers from document headers
 
 ## Getting Started
 
@@ -57,6 +58,16 @@ The system automatically detects and removes common PDF conversion artifacts:
 - Random symbols and TOC numbers
 
 No extra steps needed - just upload and the system handles it! See [docs/FORMATTING_FIXES_SUMMARY.md](docs/FORMATTING_FIXES_SUMMARY.md) for details.
+
+### Table of Contents
+
+PDFs now include an automatic table of contents:
+- Extracts all headers (H1, H2, H3) from your document
+- Displays hierarchical structure with page numbers
+- Professional styling with Sparken brand colors
+- Can be disabled if not needed
+
+See [docs/TOC_QUICKSTART.md](docs/TOC_QUICKSTART.md) for a quick guide, or [docs/TABLE_OF_CONTENTS_FEATURE.md](docs/TABLE_OF_CONTENTS_FEATURE.md) for full documentation.
 
 ## Branding Elements
 
@@ -151,6 +162,8 @@ Colors verified from Sparken brandbook 1.pdf
 
 For detailed documentation, see the [docs/](docs/) folder:
 - [Quick Start Guide](docs/QUICK_START.md)
+- [Table of Contents Quick Start](docs/TOC_QUICKSTART.md)
+- [Table of Contents Feature](docs/TABLE_OF_CONTENTS_FEATURE.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Brand Implementation Details](docs/BRAND_IMPLEMENTATION.md)
 - [Python System Guide](docs/PYTHON_SYSTEM_GUIDE.md)
