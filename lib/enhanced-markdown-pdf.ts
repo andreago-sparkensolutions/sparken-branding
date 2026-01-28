@@ -350,6 +350,7 @@ export class EnhancedMarkdownPDF {
         const text = line.replace(/^[•\-\*]\s*/, '').replace(/\t/g, '    '); // Sanitize tabs
         const segments = this.parseInlineBold(text);
         
+        // Draw bullet point
         this.page.drawText('  •', {
           x: this.margin,
           y: this.yPosition,
@@ -358,8 +359,40 @@ export class EnhancedMarkdownPDF {
           color: TEXT_BLACK
         });
         
-        this.drawTextWithBold(segments, this.margin + 20, this.yPosition);
-        this.yPosition -= this.lineHeight;
+        // Word wrap bullet text properly
+        const bulletIndent = this.margin + 20;
+        const bulletMaxWidth = this.maxWidth - 20; // Reduced width for bullet indent
+        let currentLine: TextSegment[] = [];
+        let currentWidth = 0;
+        let firstLine = true;
+        
+        for (const segment of segments) {
+          const font = segment.bold ? this.boldFont : this.font;
+          const words = segment.text.split(' ');
+          
+          for (const word of words) {
+            const wordWidth = font.widthOfTextAtSize(word + ' ', this.fontSize);
+            
+            if (currentWidth + wordWidth > bulletMaxWidth && currentLine.length > 0) {
+              // Draw current line
+              this.drawTextWithBold(currentLine, bulletIndent, this.yPosition);
+              this.yPosition -= this.lineHeight;
+              currentLine = [];
+              currentWidth = 0;
+              firstLine = false;
+            }
+            
+            currentLine.push({ text: word + ' ', bold: segment.bold });
+            currentWidth += wordWidth;
+          }
+        }
+        
+        // Draw remaining text
+        if (currentLine.length > 0) {
+          this.drawTextWithBold(currentLine, bulletIndent, this.yPosition);
+          this.yPosition -= this.lineHeight;
+        }
+        
         continue;
       }
       

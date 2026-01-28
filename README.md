@@ -57,7 +57,7 @@ The system automatically detects and removes common PDF conversion artifacts:
 - Embedded footer text
 - Random symbols and TOC numbers
 
-No extra steps needed - just upload and the system handles it! See [docs/FORMATTING_FIXES_SUMMARY.md](docs/FORMATTING_FIXES_SUMMARY.md) for details.
+No extra steps needed - just upload and the system handles it!
 
 ### Table of Contents
 
@@ -123,10 +123,13 @@ sparken-branding/
 │       ├── file.svg
 │       ├── globe.svg
 │       └── [other icons]
-├── docs/                   # Project documentation
-│   ├── README.md           # Documentation index
+├── docs/                   # Documentation
+│   ├── INDEX.md            # Documentation index
+│   ├── README.md           # Docs overview
 │   ├── QUICK_START.md      # Quick start guide
 │   ├── DEPLOYMENT.md       # Deployment guide
+│   ├── archive/            # Historical documentation
+│   ├── deployment/         # Deployment checklists
 │   └── [other docs]
 └── tests/                  # Test files and outputs
     ├── README.md           # Test documentation
@@ -161,12 +164,25 @@ Colors verified from Sparken brandbook 1.pdf
 ## Documentation
 
 For detailed documentation, see the [docs/](docs/) folder:
-- [Quick Start Guide](docs/QUICK_START.md)
-- [Table of Contents Quick Start](docs/TOC_QUICKSTART.md)
-- [Table of Contents Feature](docs/TABLE_OF_CONTENTS_FEATURE.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Brand Implementation Details](docs/BRAND_IMPLEMENTATION.md)
-- [Python System Guide](docs/PYTHON_SYSTEM_GUIDE.md)
+
+### Quick Start
+- [Quick Start Guide](docs/QUICK_START.md) - Get started quickly
+- [Documentation Index](docs/INDEX.md) - Complete documentation index
+
+### Core Documentation
+- [System Architecture](docs/SYSTEM_ARCHITECTURE.md) - Technical overview
+- [Developer Reference](docs/DEVELOPER_REFERENCE.md) - API and development guide
+- [Python System Guide](docs/PYTHON_SYSTEM_GUIDE.md) - Python PDF generation
+- [Brand Implementation](docs/BRAND_IMPLEMENTATION.md) - Branding details
+
+### Features
+- [Table of Contents Quick Start](docs/TOC_QUICKSTART.md) - TOC feature guide
+- [Table of Contents Feature](docs/TABLE_OF_CONTENTS_FEATURE.md) - Full TOC documentation
+- [Cover Page Implementation](docs/COVER_PAGE_IMPLEMENTATION.md) - Cover page feature
+
+### Deployment
+- [Deployment Guide](docs/DEPLOYMENT.md) - How to deploy
+- [Deployment Checklists](docs/deployment/) - Pre-deployment checks
 
 ## License
 
