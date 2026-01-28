@@ -56,6 +56,9 @@ export function cleanPdfArtifacts(text: string): string {
     cleanedLine = cleanedLine.replace(/\*(.+?)\*/g, '$1');  // Remove italic
     cleanedLine = cleanedLine.replace(/`(.+?)`/g, '$1');  // Remove code markers
     
+    // Fix escaped numbered lists like "1\." → "1."
+    cleanedLine = cleanedLine.replace(/(\d+)\\\./g, '$1.');
+    
     // Remove trailing single digits
     cleanedLine = cleanedLine.replace(/\s+\d+\s*$/, '');
     

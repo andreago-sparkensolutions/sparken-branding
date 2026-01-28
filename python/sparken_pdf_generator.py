@@ -152,6 +152,8 @@ class SparkEnPDFGenerator:
                 cleaned_line = re.sub(r'\*\*(.+?)\*\*', r'\1', line)  # Remove bold markers
                 cleaned_line = re.sub(r'\*(.+?)\*', r'\1', cleaned_line)  # Remove italic markers
                 cleaned_line = re.sub(r'`(.+?)`', r'\1', cleaned_line)  # Remove code markers
+                cleaned_line = re.sub(r'(\d+)\\.', r'\1.', cleaned_line)  # Fix escaped numbers: 1\. → 1.
+                cleaned_line = re.sub(r'\\([=+\-])', r'\1', cleaned_line)  # Fix other escapes: \= → =
                 
                 # Skip if line became empty after cleaning
                 if not cleaned_line.strip():
@@ -298,6 +300,10 @@ class SparkEnPDFGenerator:
         # If TOC is enabled, track headings for later
         for content_type, content_data in parsed:
             if content_type == 'h1':
+                # SPECIAL CASE: Appendix always starts on a new page
+                if 'appendix' in content_data.lower():
+                    self.story.append(PageBreak())
+                
                 self.story.append(HeadingComponent.create_h1(content_data))
                 self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 2))
                 # Track for TOC (page number will be calculated later)
@@ -305,6 +311,10 @@ class SparkEnPDFGenerator:
                     self.toc_entries.append((0, content_data, None))
             
             elif content_type == 'h2':
+                # SPECIAL CASE: Appendix always starts on a new page
+                if 'appendix' in content_data.lower():
+                    self.story.append(PageBreak())
+                
                 self.story.append(HeadingComponent.create_h2(content_data))
                 self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 2))
                 # Track for TOC
@@ -312,6 +322,10 @@ class SparkEnPDFGenerator:
                     self.toc_entries.append((1, content_data, None))
             
             elif content_type == 'h3':
+                # SPECIAL CASE: Appendix always starts on a new page
+                if 'appendix' in content_data.lower():
+                    self.story.append(PageBreak())
+                
                 self.story.append(HeadingComponent.create_h3(content_data))
                 self.story.append(Spacer(1, Layout.PARAGRAPH_SPACING / 4))
                 # Track for TOC

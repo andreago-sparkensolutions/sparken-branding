@@ -234,33 +234,60 @@ class TableComponent:
             num_cols = len(data[0])
             col_widths = [Layout.CONTENT_WIDTH / num_cols] * num_cols
         
-        # Create table
-        table = Table(data, colWidths=col_widths, repeatRows=1)
+        # Convert text to Paragraph objects for better word wrapping
+        processed_data = []
+        for i, row in enumerate(data):
+            processed_row = []
+            for j, cell in enumerate(row):
+                # Clean cell text
+                cell_text = str(cell).strip()
+                
+                # Create paragraph style
+                if i == 0:  # Header row
+                    style = ParagraphStyle(
+                        f'TableHeader_{i}_{j}',
+                        fontName=Typography.DISPLAY_FONT,
+                        fontSize=Typography.BODY_SIZE,
+                        textColor=BrandColors.WHITE,
+                        leading=Typography.BODY_SIZE * 1.2,
+                        alignment=TA_LEFT
+                    )
+                else:  # Body rows
+                    style = ParagraphStyle(
+                        f'TableCell_{i}_{j}',
+                        fontName=Typography.BODY_FONT,
+                        fontSize=Typography.BODY_SIZE,
+                        textColor=BrandColors.TEXT_BLACK,
+                        leading=Typography.BODY_SIZE * 1.2,
+                        alignment=TA_LEFT
+                    )
+                
+                # Create paragraph for word wrapping
+                para = Paragraph(cell_text, style)
+                processed_row.append(para)
+            processed_data.append(processed_row)
+        
+        # Create table with processed data
+        table = Table(processed_data, colWidths=col_widths, repeatRows=1)
         
         # Build style commands
         style_commands = [
             # Header row styling
             ('BACKGROUND', (0, 0), (-1, 0), BrandColors.BRAND_PURPLE),
-            ('TEXTCOLOR', (0, 0), (-1, 0), BrandColors.WHITE),
-            ('FONT', (0, 0), (-1, 0), Typography.DISPLAY_FONT, Typography.BODY_SIZE),
             ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('TOPPADDING', (0, 0), (-1, 0), 12),
             
             # Body styling
-            ('FONT', (0, 1), (-1, -1), Typography.BODY_FONT, Typography.BODY_SIZE),
-            ('TEXTCOLOR', (0, 1), (-1, -1), BrandColors.TEXT_BLACK),
-            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 1), (-1, -1), 'TOP'),
             ('LEFTPADDING', (0, 0), (-1, -1), 10),
             ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ('TOPPADDING', (0, 1), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
         ]
         
         # Add striped row backgrounds
-        for i in range(1, len(data)):
+        for i in range(1, len(processed_data)):
             bg_color = BrandColors.BRAND_LAVENDER if i % 2 == 1 else BrandColors.WHITE
             style_commands.append(('BACKGROUND', (0, i), (-1, i), bg_color))
         

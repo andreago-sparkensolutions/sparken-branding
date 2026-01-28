@@ -52,9 +52,9 @@ export class EnhancedMarkdownPDF {
   private checkHeadingPageBreak(headingSize: number) {
     // Headings need space for:
     // 1. The heading itself (headingSize * 2)
-    // 2. At least 2-3 lines of content after (lineHeight * 3)
+    // 2. At least 4-5 lines of content after (lineHeight * 5) - more aggressive
     // This prevents widows/orphans where heading is at bottom of page
-    const requiredSpace = (headingSize * 2) + (this.lineHeight * 3);
+    const requiredSpace = (headingSize * 2) + (this.lineHeight * 5);
     
     if (this.yPosition < this.margin + requiredSpace) {
       this.addPage();
@@ -79,7 +79,9 @@ export class EnhancedMarkdownPDF {
     const cleanedText = text
       .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove ** bold markers
       .replace(/\*(.+?)\*/g, '$1')      // Remove * italic markers
-      .replace(/`(.+?)`/g, '$1');       // Remove ` code markers
+      .replace(/`(.+?)`/g, '$1')        // Remove ` code markers
+      .replace(/(\d+)\\\./g, '$1.')     // Fix escaped numbers: 1\. → 1.
+      .replace(/\\([=+\-])/g, '$1');    // Fix other escaped chars: \= → =
     
     return [{ text: cleanedText, bold: false }];
   }
@@ -122,11 +124,49 @@ export class EnhancedMarkdownPDF {
     if (rows.length === 0) return;
     
     const colWidths = new Array(rows[0].length).fill(this.maxWidth / rows[0].length);
-    const rowHeight = 30;
     const cellPadding = 10;
+    const minRowHeight = 30;
+    
+    // Calculate row heights based on content
+    const rowHeights: number[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      let maxLines = 1;
+      
+      for (let j = 0; j < row.length; j++) {
+        let cellText = (row[j] || '')
+          .replace(/\*\*(.+?)\*\*/g, '$1')
+          .replace(/\*(.+?)\*/g, '$1')
+          .replace(/`(.+?)`/g, '$1')
+          .replace(/\[([^\]]+?)\]\([^\)]+?\)/g, '$1')
+          .replace(/\t/g, '    ');
+        
+        const font = i === 0 ? this.boldFont : this.font;
+        const words = cellText.split(' ');
+        let line = '';
+        let lineCount = 0;
+        
+        for (const word of words) {
+          const testLine = line ? `${line} ${word}` : word;
+          const width = font.widthOfTextAtSize(testLine, this.fontSize);
+          
+          if (width > colWidths[j] - cellPadding * 2 && line) {
+            lineCount++;
+            line = word;
+          } else {
+            line = testLine;
+          }
+        }
+        if (line) lineCount++;
+        maxLines = Math.max(maxLines, lineCount);
+      }
+      
+      // Calculate row height: minimum height or based on lines
+      rowHeights[i] = Math.max(minRowHeight, maxLines * this.lineHeight + cellPadding * 2);
+    }
     
     // Check if table fits on page
-    const tableHeight = rows.length * rowHeight;
+    const tableHeight = rowHeights.reduce((sum, h) => sum + h, 0);
     this.checkPageBreak(tableHeight + 20);
     
     let currentY = this.yPosition;
@@ -134,6 +174,7 @@ export class EnhancedMarkdownPDF {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const isHeader = i === 0;
+      const rowHeight = rowHeights[i];
       
       // Draw row background
       if (isHeader) {
@@ -163,6 +204,7 @@ export class EnhancedMarkdownPDF {
           .replace(/\*(.+?)\*/g, '$1')      // Remove italic markers
           .replace(/`(.+?)`/g, '$1')        // Remove code markers
           .replace(/\[([^\]]+?)\]\([^\)]+?\)/g, '$1')  // Remove links
+          .replace(/(\d+)\\\./g, '$1.')     // Fix escaped numbers
           .replace(/\t/g, '    ');          // Sanitize tabs
         
         const font = isHeader ? this.boldFont : this.font;
@@ -171,13 +213,14 @@ export class EnhancedMarkdownPDF {
         // Word wrap in cell if needed
         const words = cellText.split(' ');
         let line = '';
-        let lineY = currentY - 10;
+        let lineY = currentY - cellPadding - 5;
         
         for (const word of words) {
           const testLine = line ? `${line} ${word}` : word;
           const width = font.widthOfTextAtSize(testLine, this.fontSize);
           
           if (width > colWidths[j] - cellPadding * 2 && line) {
+            // Draw the current line
             this.page.drawText(line, {
               x: currentX + cellPadding,
               y: lineY,
@@ -192,6 +235,7 @@ export class EnhancedMarkdownPDF {
           }
         }
         
+        // Draw remaining text
         if (line) {
           this.page.drawText(line, {
             x: currentX + cellPadding,
@@ -243,8 +287,14 @@ export class EnhancedMarkdownPDF {
         const text = headerMatch[2].replace(/\t/g, '    '); // Sanitize tabs
         const fontSize = level === 1 ? 20 : level === 2 ? 16 : 14;
         
-        // PREVENT WIDOW: Ensure heading has space for content after it
-        this.checkHeadingPageBreak(fontSize);
+        // SPECIAL CASE: Appendix always starts on a new page
+        if (/appendix/i.test(text)) {
+          this.addPage();
+        } else {
+          // PREVENT WIDOW: Ensure heading has space for content after it
+          this.checkHeadingPageBreak(fontSize);
+        }
+        
         this.yPosition -= this.lineHeight;
         
         this.page.drawText(text, {
