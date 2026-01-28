@@ -153,6 +153,7 @@ class SparkEnPDFGenerator:
                 cleaned_line = re.sub(r'\*(.+?)\*', r'\1', cleaned_line)  # Remove italic markers
                 cleaned_line = re.sub(r'`(.+?)`', r'\1', cleaned_line)  # Remove code markers
                 cleaned_line = re.sub(r'(\d+)\\.', r'\1.', cleaned_line)  # Fix escaped numbers: 1\. → 1.
+                cleaned_line = re.sub(r'\\=', '=', cleaned_line)  # Fix escaped equals: \= → =
                 cleaned_line = re.sub(r'\\([=+\-])', r'\1', cleaned_line)  # Fix other escapes: \= → =
                 
                 # Skip if line became empty after cleaning

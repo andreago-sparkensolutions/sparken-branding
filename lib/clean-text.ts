@@ -59,6 +59,9 @@ export function cleanPdfArtifacts(text: string): string {
     // Fix escaped numbered lists like "1\." → "1."
     cleanedLine = cleanedLine.replace(/(\d+)\\\./g, '$1.');
     
+    // Fix escaped equals signs like "\=" → "="
+    cleanedLine = cleanedLine.replace(/\\=/g, '=');
+    
     // Remove trailing single digits
     cleanedLine = cleanedLine.replace(/\s+\d+\s*$/, '');
     

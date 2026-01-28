@@ -81,6 +81,7 @@ export class EnhancedMarkdownPDF {
       .replace(/\*(.+?)\*/g, '$1')      // Remove * italic markers
       .replace(/`(.+?)`/g, '$1')        // Remove ` code markers
       .replace(/(\d+)\\\./g, '$1.')     // Fix escaped numbers: 1\. → 1.
+      .replace(/\\=/g, '=')             // Fix escaped equals: \= → =
       .replace(/\\([=+\-])/g, '$1');    // Fix other escaped chars: \= → =
     
     return [{ text: cleanedText, bold: false }];
@@ -123,7 +124,21 @@ export class EnhancedMarkdownPDF {
   private drawTable(rows: string[][]) {
     if (rows.length === 0) return;
     
-    const colWidths = new Array(rows[0].length).fill(this.maxWidth / rows[0].length);
+    // Calculate column widths based on content
+    const numCols = rows[0].length;
+    const colWidths: number[] = [];
+    
+    // For 2-column tables, use 30/70 split (label/content)
+    if (numCols === 2) {
+      colWidths[0] = this.maxWidth * 0.30;  // Label column: 30%
+      colWidths[1] = this.maxWidth * 0.70;  // Content column: 70%
+    } else {
+      // For other tables, distribute evenly
+      for (let i = 0; i < numCols; i++) {
+        colWidths[i] = this.maxWidth / numCols;
+      }
+    }
+    
     const cellPadding = 10;
     const minRowHeight = 30;
     
