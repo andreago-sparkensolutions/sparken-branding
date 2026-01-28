@@ -80,9 +80,8 @@ export class EnhancedMarkdownPDF {
       .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove ** bold markers
       .replace(/\*(.+?)\*/g, '$1')      // Remove * italic markers
       .replace(/`(.+?)`/g, '$1')        // Remove ` code markers
-      .replace(/(\d+)\\\./g, '$1.')     // Fix escaped numbers: 1\. → 1.
-      .replace(/\\=/g, '=')             // Fix escaped equals: \= → =
-      .replace(/\\([=+\-])/g, '$1');    // Fix other escaped chars: \= → =
+      .replace(/\\([~=\-+*_\[\](){}|<>$#@!&^%])/g, '$1')  // Remove escape backslashes
+      .replace(/(\d+)\\\./g, '$1.');    // Fix escaped numbers: 1\. → 1.
     
     return [{ text: cleanedText, bold: false }];
   }
@@ -219,6 +218,7 @@ export class EnhancedMarkdownPDF {
           .replace(/\*(.+?)\*/g, '$1')      // Remove italic markers
           .replace(/`(.+?)`/g, '$1')        // Remove code markers
           .replace(/\[([^\]]+?)\]\([^\)]+?\)/g, '$1')  // Remove links
+          .replace(/\\([~=\-+*_\[\](){}|<>$#@!&^%])/g, '$1')  // Remove escape backslashes
           .replace(/(\d+)\\\./g, '$1.')     // Fix escaped numbers
           .replace(/\t/g, '    ');          // Sanitize tabs
         

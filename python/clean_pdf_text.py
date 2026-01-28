@@ -83,11 +83,12 @@ def clean_pdf_artifacts(text):
         cleaned = re.sub(r'\*(.+?)\*', r'\1', cleaned)  # Remove italic
         cleaned = re.sub(r'`(.+?)`', r'\1', cleaned)  # Remove code markers
         
+        # COMPREHENSIVE: Remove backslash escapes before special characters
+        # This handles \~, \=, \-, \+, \*, \_, \[, \], \(, \), etc.
+        cleaned = re.sub(r'\\([~=\-+*_\[\](){}|<>$#@!&^%])', r'\1', cleaned)
+        
         # Fix escaped numbered lists like "1\." → "1."
         cleaned = re.sub(r'(\d+)\\.', r'\1.', cleaned)
-        
-        # Fix escaped equals signs like "\=" → "="
-        cleaned = re.sub(r'\\=', '=', cleaned)
         
         # Remove bullet point artifacts like "•" followed by "--"
         cleaned = re.sub(r'^[•\-]\s*--\s*$', '', cleaned)
