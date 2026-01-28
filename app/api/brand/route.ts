@@ -12,13 +12,22 @@ export const runtime = 'nodejs';
 function sanitizeText(text: string): string {
   return text
     .replace(/\t/g, '    ')       // Replace tabs with 4 spaces
-    .replace(/[^\x00-\xFF]/g, '') // Remove non-Latin characters
+    // Replace Unicode arrows and special chars BEFORE removing non-Latin
+    .replace(/→/g, '->')          // Right arrow
+    .replace(/←/g, '<-')          // Left arrow
+    .replace(/↑/g, '^')           // Up arrow
+    .replace(/↓/g, 'v')           // Down arrow
+    .replace(/⇒/g, '=>')          // Double right arrow
+    .replace(/⇐/g, '<=')          // Double left arrow
+    .replace(/•/g, '*')           // Bullet point
+    .replace(/…/g, '...')         // Ellipsis
     .replace(/"/g, '"')           // Replace smart quotes
     .replace(/"/g, '"')
     .replace(/'/g, "'")
     .replace(/'/g, "'")
     .replace(/—/g, '-')           // Replace em dash
-    .replace(/–/g, '-');          // Replace en dash
+    .replace(/–/g, '-')           // Replace en dash
+    .replace(/[^\x00-\xFF]/g, ''); // Remove any remaining non-Latin characters
 }
 
 export async function POST(request: NextRequest) {
@@ -95,6 +104,9 @@ export async function POST(request: NextRequest) {
         
         // IMPORTANT: Clean PDF artifacts before processing
         markdownText = cleanPdfArtifacts(markdownText);
+        
+        // CRITICAL: Sanitize Unicode characters for WinAnsi encoding
+        markdownText = sanitizeText(markdownText);
         
         // Extract title from markdown
         const titleMatch = markdownText.match(/^#\s+(.+)$/m);
